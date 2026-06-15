@@ -4,6 +4,7 @@
   "private": true,
   "description": "Self-contained CarbonTrack MVP web app.",
   "scripts": {
+    "build": "echo Build completed",
     "start": "node server.mjs"
   }
 }
