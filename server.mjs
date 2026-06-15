@@ -3,8 +3,8 @@ import { readFile } from "node:fs/promises";
 import { extname, join, normalize } from "node:path";
 
 const root = process.cwd();
-const host = "127.0.0.1";
 const port = Number(process.env.PORT || 4173);
+
 const types = {
   ".html": "text/html; charset=utf-8",
   ".css": "text/css; charset=utf-8",
@@ -15,21 +15,31 @@ const types = {
 
 createServer(async (request, response) => {
   try {
-    const url = new URL(request.url, `http://${host}:${port}`);
+    const url = new URL(request.url, `http://localhost:${port}`);
     const requested = url.pathname === "/" ? "/index.html" : url.pathname;
     const filePath = normalize(join(root, requested));
+
     if (!filePath.startsWith(root)) {
       response.writeHead(403);
       response.end("Forbidden");
       return;
     }
+
     const body = await readFile(filePath);
-    response.writeHead(200, { "Content-Type": types[extname(filePath)] || "application/octet-stream" });
+
+    response.writeHead(200, {
+      "Content-Type":
+        types[extname(filePath)] || "application/octet-stream"
+    });
+
     response.end(body);
   } catch {
-    response.writeHead(404, { "Content-Type": "text/plain; charset=utf-8" });
+    response.writeHead(404, {
+      "Content-Type": "text/plain; charset=utf-8"
+    });
+
     response.end("Not found");
   }
-}).listen(port, host, () => {
-  console.log(`CarbonTrack is running at http://${host}:${port}`);
+}).listen(port, "0.0.0.0", () => {
+  console.log(`CarbonTrack is running on port ${port}`);
 });
