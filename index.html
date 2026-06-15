@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>CarbonTrack</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div id="app">
+      <aside class="sidebar" aria-label="Primary">
+        <div class="brand">
+          <div class="brand-mark" aria-hidden="true">C</div>
+          <div>
+            <strong>CarbonTrack</strong>
+            <span>Personal impact dashboard</span>
+          </div>
+        </div>
+        <nav class="nav" id="nav"></nav>
+        <div class="sidebar-panel">
+          <span class="panel-label">Community impact</span>
+          <strong id="communityTotal">5.8 t</strong>
+          <small>CO2e avoided by local members this month</small>
+        </div>
+      </aside>
+
+      <main class="workspace">
+        <header class="topbar">
+          <div>
+            <span class="eyebrow" id="todayLabel"></span>
+            <h1 id="pageTitle">Dashboard</h1>
+          </div>
+          <div class="top-actions">
+            <button class="icon-button" id="undoBtn" title="Undo last activity" aria-label="Undo last activity">↶</button>
+            <button class="primary-button" id="openLogBtn">+ Log Activity</button>
+          </div>
+        </header>
+
+        <section class="onboarding" id="onboarding"></section>
+        <section class="view active" id="dashboardView"></section>
+        <section class="view" id="activitiesView"></section>
+        <section class="view" id="insightsView"></section>
+        <section class="view" id="recommendationsView"></section>
+        <section class="view" id="challengesView"></section>
+        <section class="view" id="profileView"></section>
+      </main>
+    </div>
+
+    <dialog class="modal" id="activityModal">
+      <form method="dialog" class="modal-card" id="activityForm">
+        <div class="modal-head">
+          <div>
+            <span class="eyebrow">Quick log</span>
+            <h2>Activity</h2>
+          </div>
+          <button class="icon-button" value="cancel" title="Close" aria-label="Close">×</button>
+        </div>
+        <div class="form-grid">
+          <label>
+            Category
+            <select id="categoryInput" required></select>
+          </label>
+          <label>
+            Type
+            <select id="typeInput" required></select>
+          </label>
+          <label>
+            Date
+            <input id="dateInput" type="date" required />
+          </label>
+          <label>
+            Amount
+            <input id="valueInput" type="number" min="0.1" step="0.1" required />
+          </label>
+          <label>
+            Unit
+            <input id="unitInput" readonly />
+          </label>
+          <label>
+            Notes
+            <input id="notesInput" maxlength="90" placeholder="Optional" />
+          </label>
+        </div>
+        <div class="calculation-preview" id="calcPreview"></div>
+        <menu class="modal-actions">
+          <button class="ghost-button" value="cancel">Cancel</button>
+          <button class="primary-button" id="saveActivityBtn" value="default">Save activity</button>
+        </menu>
+      </form>
+    </dialog>
+
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+    <script src="app.js"></script>
+  </body>
+</html>

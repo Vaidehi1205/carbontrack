@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 520" role="img" aria-label="Forest canopy and daylight">
+  <defs>
+    <linearGradient id="sky" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0" stop-color="#8bc9c5"/>
+      <stop offset="0.55" stop-color="#d7e7cf"/>
+      <stop offset="1" stop-color="#f4d7a0"/>
+    </linearGradient>
+    <linearGradient id="leaf" x1="0" x2="1">
+      <stop offset="0" stop-color="#1f6a50"/>
+      <stop offset="1" stop-color="#6fa36f"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="520" fill="url(#sky)"/>
+  <circle cx="930" cy="105" r="64" fill="#fff0b7" opacity=".82"/>
+  <path d="M0 374 C146 298 242 330 356 286 C512 226 632 310 796 242 C940 182 1056 212 1200 156 L1200 520 L0 520 Z" fill="#285d4a" opacity=".52"/>
+  <path d="M0 432 C164 350 286 392 420 334 C558 274 702 366 856 304 C1006 244 1094 286 1200 230 L1200 520 L0 520 Z" fill="url(#leaf)" opacity=".8"/>
+  <path d="M0 496 C152 440 270 452 394 408 C530 360 668 444 820 388 C1004 320 1102 392 1200 342 L1200 520 L0 520 Z" fill="#133d33"/>
+  <g fill="none" stroke="#f7f7df" stroke-width="2" opacity=".34">
+    <path d="M72 258 C168 204 248 204 352 156"/>
+    <path d="M612 172 C694 120 780 112 872 74"/>
+    <path d="M886 290 C972 246 1064 244 1158 206"/>
+  </g>
+</svg>
