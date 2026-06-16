@@ -4,6 +4,7 @@
   "private": true,
   "description": "AI-powered sustainability platform for carbon footprint tracking.",
   "scripts": {
+<<<<<<< HEAD
     "start": "node backend/server.js",
     "dev": "node --watch backend/server.js",
     "install:backend": "npm install --prefix backend"
@@ -23,5 +24,9 @@
     "helmet": "^8.2.0",
     "mongodb": "^7.3.0",
     "mongoose": "^9.7.0"
+=======
+    "build": "echo Build completed",
+    "start": "node server.mjs"
+>>>>>>> bee6a1370e3b73cc67b4058138af22c4141641ab
   }
 }
