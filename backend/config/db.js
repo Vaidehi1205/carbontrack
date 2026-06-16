@@ -5,20 +5,23 @@ import mongoose from "mongoose";
  * Exits the process if the connection fails in production.
  */
 export default async function connectDB() {
-  const uri = process.env.MONGO_URI;
+  const uri = process.env.MONGO_URI?.trim();
 
   if (!uri) {
-    console.warn("MONGO_URI is not set. Database features will not work until configured.");
-    return;
+    const error = new Error("MONGO_URI is not set. Database features will not work until configured.");
+    console.error(error.message);
+    throw error;
   }
 
   try {
-    await mongoose.connect(uri);
+    await mongoose.connect(uri, {
+      connectTimeoutMS: 10000,
+      serverSelectionTimeoutMS: 10000
+    });
     console.log("MongoDB connected");
   } catch (error) {
     console.error("MongoDB connection error:", error.message);
-    if (process.env.NODE_ENV === "production") {
-      process.exit(1);
-    }
+    console.error("Check MONGO_URI credentials, Atlas user password, and network access.");
+    throw error;
   }
 }

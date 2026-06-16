@@ -23,7 +23,13 @@ const app = express();
 const PORT = Number(process.env.PORT || 4173);
 const HOST = "0.0.0.0";
 
-await connectDB();
+try {
+  await connectDB();
+} catch (error) {
+  console.error("Startup aborted: could not connect to MongoDB.");
+  process.exit(1);
+}
+
 getFirebaseAdmin();
 
 app.use(helmet({
