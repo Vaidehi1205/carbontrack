@@ -2,14 +2,16 @@
  * Global Express error handler — never leaks stack traces in production.
  */
 export default function errorHandler(err, req, res, next) {
-  console.error("API Error:", err.message);
+  const message = err.message || "Internal server error";
+  console.error(`[${req.method} ${req.path}] Error:`, message);
+  if (err.details) console.error("Details:", err.details);
 
   const status = err.status || err.statusCode || 500;
-  const message = status === 500 && process.env.NODE_ENV === "production"
+  const displayMessage = status === 500 && process.env.NODE_ENV === "production"
     ? "Internal server error"
-    : err.message || "Internal server error";
+    : message;
 
-  res.status(status).json({ error: message });
+  res.status(status).json({ error: displayMessage });
 }
 
 /**

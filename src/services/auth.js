@@ -50,26 +50,38 @@ export function waitForAuth() {
       onAuthStateChanged(auth, (user) => {
         currentUser = user;
         authReady = true;
+        console.log("[Auth] State changed:", user ? `${user.email}` : "logged out");
         authListeners.splice(0).forEach((fn) => fn(user));
       });
+    } else {
+      // If auth not initialized yet, resolve with null after a short delay
+      setTimeout(() => {
+        console.warn("[Auth] Auth not initialized");
+        authReady = true;
+        authListeners.splice(0).forEach((fn) => fn(null));
+      }, 100);
     }
   });
 }
 
 export function getCurrentUser() {
-  return currentUser;
+  return currentUser || auth?.currentUser || null;
 }
 
 export async function getCurrentToken() {
-  if (!currentUser) return null;
-  return currentUser.getIdToken();
+  const user = currentUser || auth?.currentUser;
+  if (!user) return null;
+  return user.getIdToken(true);
 }
 
 /**
  * Register with email and password.
  */
 export async function registerWithEmail(email, password) {
-  return createUserWithEmailAndPassword(auth, email, password);
+  const credential = await createUserWithEmailAndPassword(auth, email, password);
+  currentUser = credential.user;
+  authReady = true;
+  return credential;
 }
 
 /**
@@ -77,7 +89,10 @@ export async function registerWithEmail(email, password) {
  */
 export async function loginWithEmail(email, password, remember = true) {
   await setPersistence(auth, remember ? browserLocalPersistence : browserSessionPersistence);
-  return signInWithEmailAndPassword(auth, email, password);
+  const credential = await signInWithEmailAndPassword(auth, email, password);
+  currentUser = credential.user;
+  authReady = true;
+  return credential;
 }
 
 /**
@@ -86,7 +101,10 @@ export async function loginWithEmail(email, password, remember = true) {
 export async function loginWithGoogle(remember = true) {
   await setPersistence(auth, remember ? browserLocalPersistence : browserSessionPersistence);
   const provider = new GoogleAuthProvider();
-  return signInWithPopup(auth, provider);
+  const credential = await signInWithPopup(auth, provider);
+  currentUser = credential.user;
+  authReady = true;
+  return credential;
 }
 
 /**
@@ -110,6 +128,7 @@ export async function logout() {
 export async function requireAuth(redirectTo = "/login.html") {
   const user = await waitForAuth();
   if (!user) {
+    console.log(`[Auth] No user found, redirecting to ${redirectTo}`);
     window.location.href = redirectTo;
     return null;
   }

@@ -73,12 +73,19 @@
       await initFirebase(config.firebase);
 
       const existing = await waitForAuth();
-      if (existing) {
-        window.location.href = "/index.html";
-      }
-
       const form = document.getElementById("registerForm");
       const errorEl = document.getElementById("registerError");
+      const passwordInput = document.getElementById("password");
+
+      if (existing) {
+        console.log("[Register] Firebase user signed in, awaiting profile completion");
+        document.getElementById("email").value = existing.email || "";
+        if (existing.displayName) {
+          document.getElementById("name").value = existing.displayName;
+        }
+        passwordInput.required = false;
+        passwordInput.placeholder = "Leave empty to use your existing logged-in account";
+      }
 
       async function completeRegistration(credential, profile) {
         await authApi.register({
@@ -87,6 +94,7 @@
           country: profile.country,
           goal: profile.goal
         });
+        console.log("[Register] User registered successfully, redirecting to app");
         window.location.href = "/index.html";
       }
 
@@ -100,13 +108,25 @@
           country: document.getElementById("country").value,
           goal: document.getElementById("goal").value
         };
-        const password = document.getElementById("password").value;
+        const password = passwordInput.value;
 
         try {
-          const credential = await registerWithEmail(profile.email, password);
+          const credential = existing
+            ? { user: existing }
+            : await registerWithEmail(profile.email, password);
           await completeRegistration(credential, profile);
         } catch (error) {
-          errorEl.textContent = error.message || "Registration failed.";
+          let message = error.message || "Registration failed.";
+          if (message.includes("CONFIGURATION_NOT_FOUND")) {
+            message = "Firebase is not properly configured. Contact the admin.";
+          } else if (message.includes("EMAIL_EXISTS")) {
+            message = "This email is already registered.";
+          } else if (message.includes("WEAK_PASSWORD")) {
+            message = "Password must be at least 6 characters.";
+          } else if (message.includes("INVALID_EMAIL")) {
+            message = "Please enter a valid email address.";
+          }
+          errorEl.textContent = message;
         }
       });
 

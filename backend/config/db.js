@@ -5,7 +5,11 @@ import mongoose from "mongoose";
  * Exits the process if the connection fails in production.
  */
 export default async function connectDB() {
-  const uri = process.env.MONGO_URI?.trim();
+  let uri = process.env.MONGO_URI?.trim();
+
+  if (uri?.startsWith('"') && uri.endsWith('"')) {
+    uri = uri.slice(1, -1).trim();
+  }
 
   if (!uri) {
     const error = new Error("MONGO_URI is not set. Database features will not work until configured.");
@@ -13,15 +17,18 @@ export default async function connectDB() {
     throw error;
   }
 
+  const dbName = process.env.MONGO_DB?.trim() || "carbontrack";
+
   try {
-    await mongoose.connect(uri, {
+    const connection = await mongoose.connect(uri, {
       connectTimeoutMS: 10000,
-      serverSelectionTimeoutMS: 10000
+      serverSelectionTimeoutMS: 10000,
+      dbName
     });
-    console.log("MongoDB connected");
+    console.log(`MongoDB connected to ${connection.connection.name} at ${connection.connection.host}`);
   } catch (error) {
     console.error("MongoDB connection error:", error.message);
-    console.error("Check MONGO_URI credentials, Atlas user password, and network access.");
+    console.error("Check MONGO_URI credentials, Atlas user password, network access, and database name.");
     throw error;
   }
 }

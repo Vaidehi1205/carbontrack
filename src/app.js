@@ -69,13 +69,19 @@ const els = {
 /** Bootstrap: auth check, load remote data, render app. */
 async function bootstrap() {
   try {
+    console.log("[Bootstrap] Starting...");
     const config = await fetchConfig();
     await initFirebase(config.firebase);
     const user = await requireAuth();
-    if (!user) return;
+    if (!user) {
+      console.log("[Bootstrap] No user, redirected to login");
+      return;
+    }
 
+    console.log("[Bootstrap] User authenticated, loading data...");
     await loadRemoteData(user);
     apiReady = true;
+    console.log("[Bootstrap] Data loaded, rendering app");
     render();
     loadAiInsights();
   } catch (error) {
@@ -99,12 +105,12 @@ async function loadRemoteData(firebaseUser) {
     state.completedChallenges = meta?.completedChallenges || [];
     state.theme = meta?.theme || state.theme;
     state.onboarded = meta?.onboarded !== false;
-  } catch {
-    /* Profile may not exist yet for Google users — redirect to complete registration */
-    if (firebaseUser) {
+  } catch (error) {
+    if (firebaseUser && error.message === "Profile not found") {
       window.location.href = `/register.html?email=${encodeURIComponent(firebaseUser.email || "")}`;
       return;
     }
+    throw error;
   }
 
   try {

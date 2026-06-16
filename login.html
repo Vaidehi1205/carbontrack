@@ -49,7 +49,7 @@
     </div>
 
     <script type="module">
-      import { fetchConfig } from "./src/services/api.js";
+      import { fetchConfig, authApi } from "./src/services/api.js";
       import { initFirebase, loginWithEmail, loginWithGoogle, waitForAuth } from "./src/services/auth.js";
 
       const config = await fetchConfig();
@@ -57,7 +57,17 @@
 
       const existing = await waitForAuth();
       if (existing) {
-        window.location.href = "/index.html";
+        try {
+          await authApi.me();
+          console.log("[Login] User already logged in, redirecting to app");
+          window.location.href = "/index.html";
+          throw new Error("Redirect in progress");
+        } catch (error) {
+          if (error.message === "Profile not found") {
+            window.location.href = `/register.html?email=${encodeURIComponent(existing.email || "")}`;
+            throw new Error("Redirect in progress");
+          }
+        }
       }
 
       const form = document.getElementById("loginForm");
@@ -72,9 +82,20 @@
 
         try {
           await loginWithEmail(email, password, remember);
+          console.log("[Login] Login successful, redirecting to app");
           window.location.href = "/index.html";
         } catch (error) {
-          errorEl.textContent = error.message || "Login failed. Check your credentials.";
+          let message = error.message || "Login failed. Check your credentials.";
+          if (message.includes("CONFIGURATION_NOT_FOUND")) {
+            message = "Firebase is not properly configured. Contact the admin.";
+          } else if (message.includes("user-not-found")) {
+            message = "No account found with this email.";
+          } else if (message.includes("wrong-password")) {
+            message = "Incorrect password.";
+          } else if (message.includes("too-many-requests")) {
+            message = "Too many failed login attempts. Try again later.";
+          }
+          errorEl.textContent = message;
         }
       });
 
@@ -83,6 +104,7 @@
         const remember = document.getElementById("remember").checked;
         try {
           await loginWithGoogle(remember);
+          console.log("[Login] Google login successful, redirecting to app");
           window.location.href = "/index.html";
         } catch (error) {
           errorEl.textContent = error.message || "Google sign-in failed.";

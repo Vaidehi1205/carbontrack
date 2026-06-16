@@ -15,6 +15,7 @@ export const registerValidation = [
 export const register = asyncHandler(async (req, res) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
+    console.error("[POST /api/auth/register] Validation errors:", errors.array());
     return res.status(400).json({ errors: errors.array() });
   }
 
