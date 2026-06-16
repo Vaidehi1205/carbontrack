@@ -1,29 +1,25 @@
-import { factors } from "../data/factors.js";
-import { calculateActivityCo2 } from "./calculations.js";
 import { createId, daysAgoKey } from "./helpers.js";
 
-const key = "carbontrack-state-v2";
-const legacyKey = "carbontrack-state";
+const key = "carbontrack-ui-v3";
 
-function sampleActivity(category, type, daysAgo, value, notes = "") {
-  const item = factors[category][type];
+/**
+ * Default UI-only state stored in localStorage.
+ * User data and activities are persisted in MongoDB via the API.
+ */
+export function defaultUiState() {
   return {
-    id: createId(),
-    category,
-    type,
-    date: daysAgoKey(daysAgo),
-    value,
-    unit: item.unit,
-    co2: calculateActivityCo2(category, type, value),
-    notes
+    activeView: "dashboard",
+    activityFilter: "all",
+    activitySearch: "",
+    activitySort: "newest"
   };
 }
 
-export function defaultState() {
+export function defaultAppState() {
   return {
     user: {
-      name: "Alex",
-      location: "Seattle, WA",
+      name: "",
+      location: "",
       country: "US",
       household: 2,
       motivation: "climate",
@@ -32,66 +28,68 @@ export function defaultState() {
       renewable: 18,
       target: 7800,
       consent: false,
-      avatar: "A"
+      avatar: "U",
+      email: "",
+      goal: "climate"
     },
-    activities: [
-      sampleActivity("transportation", "car_petrol", -6, 22, "Commute"),
-      sampleActivity("food", "plant_meal", -6, 2, "Lunch"),
-      sampleActivity("energy", "electricity", -5, 18, "Home use"),
-      sampleActivity("transportation", "bus", -4, 14, "Office day"),
-      sampleActivity("food", "beef_meal", -3, 1, "Dinner"),
-      sampleActivity("waste", "recycled", -2, 2, "Recycling"),
-      sampleActivity("shopping", "clothing", -1, 1, "Work shirt"),
-      sampleActivity("transportation", "bike_walk", 0, 5, "Errands")
-    ],
+    activities: [],
     started: [],
     dismissed: [],
     joinedChallenges: [],
     completedChallenges: [],
     theme: "light",
     onboarded: false,
-    ui: {
-      activeView: "dashboard",
-      activityFilter: "all",
-      activitySearch: "",
-      activitySort: "newest"
+    ui: defaultUiState(),
+    aiInsights: null,
+    chat: {
+      messages: [],
+      history: [],
+      suggestions: [],
+      typing: false,
+      search: ""
     }
   };
 }
 
-export function loadState() {
-  const saved = localStorage.getItem(key);
-  if (saved) return normalize(JSON.parse(saved));
-  const legacy = localStorage.getItem(legacyKey);
-  if (legacy) return normalize({ ...defaultState(), ...JSON.parse(legacy) });
-  return defaultState();
+/** Load UI preferences from localStorage. */
+export function loadUiState() {
+  try {
+    const saved = localStorage.getItem(key);
+    if (saved) return JSON.parse(saved);
+  } catch {
+    /* ignore corrupt data */
+  }
+  return { theme: "light", ui: defaultUiState() };
 }
 
-export function saveState(state) {
-  localStorage.setItem(key, JSON.stringify(state));
+/** Save UI preferences (theme, active view filters) to localStorage. */
+export function saveUiState(state) {
+  localStorage.setItem(key, JSON.stringify({
+    theme: state.theme,
+    ui: state.ui
+  }));
 }
 
-export function clearState() {
-  localStorage.removeItem(key);
-  localStorage.removeItem(legacyKey);
+/** Legacy migration: read old localStorage activities for one-time sync. */
+export function loadLegacyActivities() {
+  const legacyKeys = ["carbontrack-state-v2", "carbontrack-state"];
+  for (const legacyKey of legacyKeys) {
+    try {
+      const saved = localStorage.getItem(legacyKey);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed.activities?.length) return parsed.activities;
+      }
+    } catch {
+      /* continue */
+    }
+  }
+  return [];
 }
 
-function normalize(state) {
-  const base = defaultState();
-  return {
-    ...base,
-    ...state,
-    user: { ...base.user, ...(state.user || {}) },
-    ui: { ...base.ui, ...(state.ui || {}) },
-    activities: (state.activities || []).map((activity) => ({
-      ...activity,
-      id: activity.id || createId(),
-      unit: activity.unit || factors[activity.category]?.[activity.type]?.unit || "",
-      co2: Number.isFinite(activity.co2) ? activity.co2 : calculateActivityCo2(activity.category, activity.type, activity.value)
-    })),
-    started: state.started || [],
-    dismissed: state.dismissed || [],
-    joinedChallenges: state.joinedChallenges || [],
-    completedChallenges: state.completedChallenges || []
-  };
+export function clearLegacyStorage() {
+  localStorage.removeItem("carbontrack-state-v2");
+  localStorage.removeItem("carbontrack-state");
 }
+
+export { createId, daysAgoKey };

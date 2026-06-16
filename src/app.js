@@ -1,20 +1,32 @@
 import { factors } from "./data/factors.js";
 import { activitiesView } from "./components/activities.js";
 import { challengesView } from "./components/challenges.js";
+import { coachView, scrollChatToBottom } from "./components/coach.js";
 import { dashboardView, renderDashboardCharts } from "./components/dashboard.js";
 import { insightsView, renderInsightsCharts } from "./components/insights.js";
 import { renderNavbar } from "./components/navbar.js";
 import { profileView } from "./components/profile.js";
 import { recommendationsView } from "./components/recommendations.js";
 import { calculateActivityCo2, pointsFor } from "./utils/calculations.js";
-import { clearState, defaultState, loadState, saveState } from "./utils/storage.js";
+import {
+  defaultAppState,
+  loadUiState,
+  saveUiState,
+  loadLegacyActivities,
+  clearLegacyStorage
+} from "./utils/storage.js";
 import { createId, downloadFile, escapeHtml, formatKg, title, todayKey } from "./utils/helpers.js";
 import { validateActivity } from "./utils/validation.js";
+import { fetchConfig, activitiesApi, authApi, dashboardApi, chatbotApi, usersApi } from "./services/api.js";
+import { initFirebase, requireAuth, logout, waitForAuth } from "./services/auth.js";
+
+const PROTECTED_VIEWS = ["dashboard", "activities", "insights", "coach", "recommendations", "challenges", "profile"];
 
 const views = {
   dashboard: dashboardView,
   activities: activitiesView,
   insights: insightsView,
+  coach: coachView,
   recommendations: recommendationsView,
   challenges: challengesView,
   profile: profileView
@@ -24,15 +36,17 @@ const titles = {
   dashboard: "Dashboard",
   activities: "Activity log",
   insights: "Insights",
+  coach: "Carbon Coach",
   recommendations: "Recommended actions",
   challenges: "Challenges",
   profile: "Profile"
 };
 
-let state = loadState();
+let state = defaultAppState();
 let editingId = null;
 let deletedTimer = null;
 let lastDeleted = null;
+let apiReady = false;
 
 const els = {
   nav: document.getElementById("nav"),
@@ -52,6 +66,94 @@ const els = {
   saveActivityBtn: document.getElementById("saveActivityBtn")
 };
 
+/** Bootstrap: auth check, load remote data, render app. */
+async function bootstrap() {
+  try {
+    const config = await fetchConfig();
+    await initFirebase(config.firebase);
+    const user = await requireAuth();
+    if (!user) return;
+
+    await loadRemoteData(user);
+    apiReady = true;
+    render();
+    loadAiInsights();
+  } catch (error) {
+    console.error("Bootstrap error:", error);
+    toast("Failed to load app data. Some features may be unavailable.", "!");
+  }
+}
+
+/** Load user profile and activities from the API. */
+async function loadRemoteData(firebaseUser) {
+  const uiSaved = loadUiState();
+  state.theme = uiSaved.theme || "light";
+  state.ui = { ...state.ui, ...uiSaved.ui };
+
+  try {
+    const { user, meta } = await authApi.me();
+    state.user = { ...state.user, ...user, target: user.target || user.annualTarget || 7800 };
+    state.started = meta?.started || [];
+    state.dismissed = meta?.dismissed || [];
+    state.joinedChallenges = meta?.joinedChallenges || [];
+    state.completedChallenges = meta?.completedChallenges || [];
+    state.theme = meta?.theme || state.theme;
+    state.onboarded = meta?.onboarded !== false;
+  } catch {
+    /* Profile may not exist yet for Google users — redirect to complete registration */
+    if (firebaseUser) {
+      window.location.href = `/register.html?email=${encodeURIComponent(firebaseUser.email || "")}`;
+      return;
+    }
+  }
+
+  try {
+    const { activities } = await activitiesApi.list();
+    state.activities = activities;
+
+    if (!activities.length) {
+      const legacy = loadLegacyActivities();
+      if (legacy.length) {
+        await activitiesApi.sync(legacy);
+        const refreshed = await activitiesApi.list();
+        state.activities = refreshed.activities;
+        clearLegacyStorage();
+        toast("Local activities synced to cloud.", "☁");
+      }
+    }
+  } catch (error) {
+    console.warn("Activities load failed:", error.message);
+  }
+}
+
+/** Fetch AI insights in the background. */
+async function loadAiInsights() {
+  try {
+    const { insights } = await dashboardApi.insights();
+    state.aiInsights = insights;
+    if (state.ui.activeView === "dashboard" || state.ui.activeView === "insights") {
+      document.getElementById(`${state.ui.activeView}View`).innerHTML = views[state.ui.activeView](state);
+      renderCharts();
+    }
+  } catch {
+    /* AI insights are optional */
+  }
+}
+
+/** Load chat history and suggestions for Carbon Coach. */
+async function loadChatData() {
+  try {
+    const [historyRes, suggestionsRes] = await Promise.all([
+      chatbotApi.history(state.chat.search),
+      chatbotApi.suggestions()
+    ]);
+    state.chat.history = historyRes.chats || [];
+    state.chat.suggestions = suggestionsRes.suggestions || [];
+  } catch {
+    /* Chat data is optional on first load */
+  }
+}
+
 function render() {
   applyTheme();
   els.nav.innerHTML = renderNavbar(state);
@@ -64,7 +166,7 @@ function render() {
   showView(state.ui.activeView);
   bindEvents();
   renderCharts();
-  saveState(state);
+  saveUiState(state);
 }
 
 function renderOnboarding() {
@@ -78,8 +180,8 @@ function renderOnboarding() {
   node.innerHTML = `
     <div class="card hero-visual onboarding-card">
       <span class="eyebrow">Welcome</span>
-      <h2>Track your carbon footprint in 5 minutes</h2>
-      <p>Set a baseline, then start with the activities that shape most of your weekly impact.</p>
+      <h2>Complete your sustainability profile</h2>
+      <p>Set a baseline so Carbon Coach can personalize your advice.</p>
     </div>
     <div class="card onboarding-card" style="margin-top:16px">
       <form id="onboardingForm" class="form-grid">
@@ -112,7 +214,7 @@ function renderOnboarding() {
   document.getElementById("renewableSetup").addEventListener("input", (event) => {
     document.getElementById("renewableRead").textContent = `${event.target.value}%`;
   });
-  document.getElementById("onboardingForm").addEventListener("submit", (event) => {
+  document.getElementById("onboardingForm").addEventListener("submit", async (event) => {
     event.preventDefault();
     state.user = {
       ...state.user,
@@ -127,12 +229,23 @@ function renderOnboarding() {
       avatar: valueOf("nameSetup").slice(0, 1).toUpperCase()
     };
     state.onboarded = true;
+
+    if (apiReady) {
+      try {
+        await usersApi.updateProfile({ ...state.user, onboarded: true, annualTarget: state.user.target });
+      } catch (error) {
+        toast("Profile save failed: " + error.message, "!");
+      }
+    }
+
     toast("Baseline ready. Your dashboard is live.", "✓");
     render();
+    loadAiInsights();
   });
 }
 
 function showView(view) {
+  if (!PROTECTED_VIEWS.includes(view)) view = "dashboard";
   els.pageTitle.textContent = state.onboarded ? titles[view] : "Welcome";
   document.querySelectorAll(".view").forEach((section) => section.classList.remove("active"));
   if (state.onboarded) document.getElementById(`${view}View`).classList.add("active");
@@ -145,10 +258,19 @@ function renderCharts() {
 }
 
 function bindEvents() {
-  document.querySelectorAll("[data-view]").forEach((button) => button.addEventListener("click", () => {
+  document.querySelectorAll("[data-view]").forEach((button) => button.addEventListener("click", async () => {
     state.ui.activeView = button.dataset.view;
+    if (button.dataset.view === "coach") {
+      await loadChatData();
+    }
     render();
+    if (button.dataset.view === "coach") scrollChatToBottom();
   }));
+
+  document.getElementById("logoutBtn")?.addEventListener("click", async () => {
+    await logout();
+    window.location.href = "/login.html";
+  });
 
   document.querySelectorAll("[data-open-log]").forEach((button) => button.addEventListener("click", () => openActivityModal()));
   document.querySelectorAll("[data-quick]").forEach((button) => button.addEventListener("click", () => {
@@ -176,20 +298,121 @@ function bindEvents() {
   document.querySelectorAll("[data-start]").forEach((button) => button.addEventListener("click", () => startRecommendation(button.dataset.start)));
   document.querySelectorAll("[data-dismiss]").forEach((button) => button.addEventListener("click", () => {
     state.dismissed = [...new Set([...state.dismissed, button.dataset.dismiss])];
+    persistMeta();
     toast("Recommendation dismissed.", "−");
     render();
   }));
-  document.querySelectorAll("[data-join]").forEach((button) => button.addEventListener("click", () => {
-    state.joinedChallenges = [...new Set([...state.joinedChallenges, button.dataset.join])];
-    toast("Challenge joined. 50 points earned.", "✓");
-    render();
-  }));
-  document.querySelectorAll("[data-complete]").forEach((button) => button.addEventListener("click", () => {
-    state.completedChallenges = [...new Set([...state.completedChallenges, button.dataset.complete])];
-    toast("Challenge completed. 100 points earned.", "★");
-    render();
-  }));
+  document.querySelectorAll("[data-join]").forEach((button) => button.addEventListener("click", () => joinChallenge(button.dataset.join)));
+  document.querySelectorAll("[data-complete]").forEach((button) => button.addEventListener("click", () => completeChallenge(button.dataset.complete)));
   bindProfile();
+  bindCoach();
+}
+
+function bindCoach() {
+  const form = document.getElementById("chatForm");
+  if (!form) return;
+
+  form.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const input = document.getElementById("chatInput");
+    const message = input.value.trim();
+    if (!message) return;
+
+    state.chat.messages.push({ role: "user", text: message, timestamp: new Date().toISOString() });
+    state.chat.typing = true;
+    input.value = "";
+    document.getElementById("coachView").innerHTML = coachView(state);
+    scrollChatToBottom();
+
+    try {
+      const response = await chatbotApi.send(message);
+      state.chat.messages.push({ role: "coach", text: response.answer, timestamp: response.timestamp });
+      await loadChatData();
+    } catch (error) {
+      state.chat.messages.push({ role: "coach", text: "Sorry, I couldn't process that. " + error.message, timestamp: new Date().toISOString() });
+    }
+
+    state.chat.typing = false;
+    document.getElementById("coachView").innerHTML = coachView(state);
+    bindCoach();
+    scrollChatToBottom();
+  });
+
+  document.querySelectorAll("[data-suggest]").forEach((button) => button.addEventListener("click", () => {
+    document.getElementById("chatInput").value = button.dataset.suggest;
+    form.requestSubmit();
+  }));
+
+  const searchInput = document.getElementById("chatSearch");
+  if (searchInput) {
+    let debounce;
+    searchInput.addEventListener("input", (event) => {
+      clearTimeout(debounce);
+      debounce = setTimeout(async () => {
+        state.chat.search = event.target.value;
+        await loadChatData();
+        document.getElementById("coachView").innerHTML = coachView(state);
+        bindCoach();
+      }, 300);
+    });
+  }
+
+  document.querySelectorAll("[data-load-chat]").forEach((button) => button.addEventListener("click", () => {
+    const item = state.chat.history.find((h) => h.id === button.dataset.loadChat);
+    if (!item) return;
+    state.chat.messages = [
+      { role: "user", text: item.question, timestamp: item.timestamp },
+      { role: "coach", text: item.answer, timestamp: item.timestamp }
+    ];
+    document.getElementById("coachView").innerHTML = coachView(state);
+    bindCoach();
+    scrollChatToBottom();
+  }));
+
+  document.querySelectorAll("[data-delete-chat]").forEach((button) => button.addEventListener("click", async () => {
+    try {
+      await chatbotApi.delete(button.dataset.deleteChat);
+      await loadChatData();
+      toast("Chat deleted.", "−");
+      document.getElementById("coachView").innerHTML = coachView(state);
+      bindCoach();
+    } catch (error) {
+      toast("Delete failed: " + error.message, "!");
+    }
+  }));
+}
+
+async function persistMeta() {
+  if (!apiReady) return;
+  try {
+    await usersApi.updateProfile({
+      started: state.started,
+      dismissed: state.dismissed,
+      joinedChallenges: state.joinedChallenges,
+      completedChallenges: state.completedChallenges,
+      theme: state.theme
+    });
+  } catch {
+    /* non-critical */
+  }
+}
+
+async function joinChallenge(id) {
+  state.joinedChallenges = [...new Set([...state.joinedChallenges, id])];
+  if (apiReady) {
+    try { await usersApi.updateChallenge(id, "join"); } catch { /* local fallback */ }
+  }
+  toast("Challenge joined. 50 points earned.", "✓");
+  render();
+}
+
+async function completeChallenge(id) {
+  state.completedChallenges = [...new Set([...state.completedChallenges, id])];
+  if (apiReady) {
+    try { await usersApi.updateChallenge(id, "complete"); } catch { /* local fallback */ }
+  }
+  toast("Challenge completed. 100 points earned.", "★");
+  render();
 }
 
 function bindProfile() {
@@ -198,7 +421,7 @@ function bindProfile() {
     document.getElementById("profileRenewableRead").textContent = `${event.target.value}%`;
   });
   const form = document.getElementById("profileForm");
-  if (form) form.addEventListener("submit", (event) => {
+  if (form) form.addEventListener("submit", async (event) => {
     event.preventDefault();
     state.user = {
       ...state.user,
@@ -212,6 +435,16 @@ function bindProfile() {
       avatar: valueOf("profileName").slice(0, 1).toUpperCase()
     };
     state.theme = valueOf("profileTheme");
+
+    if (apiReady) {
+      try {
+        await usersApi.updateProfile({ ...state.user, annualTarget: state.user.target, theme: state.theme });
+      } catch (error) {
+        toast("Profile save failed: " + error.message, "!");
+        return;
+      }
+    }
+
     toast("Profile saved.", "✓");
     render();
   });
@@ -221,10 +454,7 @@ function bindProfile() {
   if (csv) csv.addEventListener("click", exportCsv);
   const reset = document.getElementById("resetBtn");
   if (reset) reset.addEventListener("click", () => {
-    clearState();
-    state = defaultState();
-    toast("App reset.", "↺");
-    render();
+    toast("Reset is disabled in cloud mode. Delete activities individually.", "!");
   });
 }
 
@@ -233,6 +463,7 @@ function setupGlobalEvents() {
   document.getElementById("undoBtn").addEventListener("click", undoLastDelete);
   els.themeToggle.addEventListener("click", () => {
     state.theme = state.theme === "dark" ? "light" : "dark";
+    persistMeta();
     toast(`${title(state.theme)} mode enabled.`, "◐");
     render();
   });
@@ -276,7 +507,7 @@ function updatePreview() {
   els.preview.innerHTML = `<strong>${formatKg(calculateActivityCo2(category, type, amount))} CO2e</strong><span class="muted"> · ${amount || 0} ${factor.unit} × ${factor.factor} kg/${factor.unit}</span><div class="form-error" id="modalErrors"></div>`;
 }
 
-function saveActivityFromModal(event) {
+async function saveActivityFromModal(event) {
   event.preventDefault();
   const input = {
     category: els.category.value,
@@ -290,51 +521,91 @@ function saveActivityFromModal(event) {
     document.getElementById("modalErrors").textContent = errors.join(" ");
     return;
   }
-  const factor = factors[input.category][input.type];
-  const nextActivity = {
-    id: editingId || createId(),
-    ...input,
-    unit: factor.unit,
-    co2: calculateActivityCo2(input.category, input.type, input.value)
-  };
-  if (editingId) {
-    state.activities = state.activities.map((activity) => activity.id === editingId ? nextActivity : activity);
-    toast("Activity updated.", "✓");
-  } else {
-    state.activities = [...state.activities, nextActivity];
-    toast("Activity logged. 10 points earned.", "✓");
+
+  try {
+    if (editingId && apiReady) {
+      const { activity } = await activitiesApi.update(editingId, input);
+      state.activities = state.activities.map((a) => a.id === editingId ? activity : a);
+      toast("Activity updated.", "✓");
+    } else if (apiReady) {
+      const { activity } = await activitiesApi.create(input);
+      state.activities = [...state.activities, activity];
+      toast("Activity logged. 10 points earned.", "✓");
+    } else {
+      const factor = factors[input.category][input.type];
+      const nextActivity = {
+        id: editingId || createId(),
+        ...input,
+        unit: factor.unit,
+        co2: calculateActivityCo2(input.category, input.type, input.value)
+      };
+      if (editingId) {
+        state.activities = state.activities.map((a) => a.id === editingId ? nextActivity : a);
+      } else {
+        state.activities = [...state.activities, nextActivity];
+      }
+      toast("Activity saved locally.", "✓");
+    }
+  } catch (error) {
+    document.getElementById("modalErrors").textContent = error.message;
+    return;
   }
+
   editingId = null;
   els.modal.close();
   render();
+  loadAiInsights();
 }
 
-function deleteActivity(id) {
+async function deleteActivity(id) {
   const activity = state.activities.find((item) => item.id === id);
   if (!activity) return;
   lastDeleted = activity;
-  state.activities = state.activities.filter((item) => item.id !== id);
-  clearTimeout(deletedTimer);
-  deletedTimer = setTimeout(() => { lastDeleted = null; }, 7000);
-  toast("Activity deleted.", "−", `<button class="toast-action" id="toastUndo">Undo</button>`);
-  document.getElementById("toastUndo")?.addEventListener("click", undoLastDelete);
-  render();
+
+  try {
+    if (apiReady) await activitiesApi.remove(id);
+    state.activities = state.activities.filter((item) => item.id !== id);
+    clearTimeout(deletedTimer);
+    deletedTimer = setTimeout(() => { lastDeleted = null; }, 7000);
+    toast("Activity deleted.", "−", `<button class="toast-action" id="toastUndo">Undo</button>`);
+    document.getElementById("toastUndo")?.addEventListener("click", undoLastDelete);
+    render();
+    loadAiInsights();
+  } catch (error) {
+    toast("Delete failed: " + error.message, "!");
+  }
 }
 
-function undoLastDelete() {
+async function undoLastDelete() {
   if (!lastDeleted) {
     toast("Nothing to undo.", "↶");
     return;
   }
-  state.activities = [...state.activities, lastDeleted];
-  lastDeleted = null;
-  clearTimeout(deletedTimer);
-  toast("Delete undone.", "↶");
-  render();
+  try {
+    if (apiReady) {
+      const { activity } = await activitiesApi.create({
+        category: lastDeleted.category,
+        type: lastDeleted.type,
+        date: lastDeleted.date,
+        value: lastDeleted.value,
+        notes: lastDeleted.notes
+      });
+      state.activities = [...state.activities, activity];
+    } else {
+      state.activities = [...state.activities, lastDeleted];
+    }
+    lastDeleted = null;
+    clearTimeout(deletedTimer);
+    toast("Delete undone.", "↶");
+    render();
+  } catch (error) {
+    toast("Undo failed: " + error.message, "!");
+  }
 }
 
 function startRecommendation(id) {
   state.started = [...new Set([...state.started, id])];
+  persistMeta();
   toast("Action added to your pathway. 50 points earned.", "★");
   render();
 }
@@ -342,13 +613,7 @@ function startRecommendation(id) {
 function exportCsv() {
   const header = ["Date", "Category", "Type", "Value", "Unit", "CO2", "Notes"];
   const rows = state.activities.map((activity) => [
-    activity.date,
-    activity.category,
-    activity.type,
-    activity.value,
-    activity.unit,
-    activity.co2,
-    activity.notes || ""
+    activity.date, activity.category, activity.type, activity.value, activity.unit, activity.co2, activity.notes || ""
   ]);
   const csv = [header, ...rows]
     .map((row) => row.map((cell) => `"${String(cell).replaceAll('"', '""')}"`).join(","))
@@ -378,4 +643,4 @@ function valueOf(id) {
 }
 
 setupGlobalEvents();
-render();
+bootstrap();

@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Register — CarbonTrack</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body class="auth-page">
+    <div class="auth-container">
+      <div class="auth-card">
+        <div class="brand auth-brand">
+          <div class="brand-mark">C</div>
+          <div>
+            <strong>CarbonTrack</strong>
+            <span>Create your sustainability account</span>
+          </div>
+        </div>
+
+        <form id="registerForm" class="form-grid">
+          <label>
+            Full Name
+            <input id="name" type="text" required minlength="2" maxlength="80" placeholder="Alex Johnson" />
+          </label>
+          <label>
+            Email
+            <input id="email" type="email" required autocomplete="email" placeholder="you@example.com" />
+          </label>
+          <label>
+            Password
+            <input id="password" type="password" required minlength="6" autocomplete="new-password" placeholder="Min. 6 characters" />
+          </label>
+          <label>
+            Country
+            <select id="country" required>
+              <option value="US">USA</option>
+              <option value="IN">India</option>
+              <option value="UK">UK</option>
+              <option value="CA">Canada</option>
+              <option value="AU">Australia</option>
+            </select>
+          </label>
+          <label>
+            Sustainability Goal
+            <select id="goal" required>
+              <option value="climate">Reduce climate impact</option>
+              <option value="cost">Save money on energy</option>
+              <option value="health">Improve health</option>
+              <option value="social">Community & social impact</option>
+            </select>
+          </label>
+          <div class="form-error" id="registerError"></div>
+          <button class="primary-button" type="submit">Create account</button>
+        </form>
+
+        <div class="auth-divider"><span>or</span></div>
+
+        <button class="ghost-button google-btn" id="googleRegister" type="button">
+          Sign up with Google
+        </button>
+
+        <p class="auth-footer">
+          Already have an account? <a href="login.html">Sign in</a>
+        </p>
+      </div>
+    </div>
+
+    <script type="module">
+      import { fetchConfig, authApi } from "./src/services/api.js";
+      import { initFirebase, registerWithEmail, loginWithGoogle, waitForAuth } from "./src/services/auth.js";
+
+      const config = await fetchConfig();
+      await initFirebase(config.firebase);
+
+      const existing = await waitForAuth();
+      if (existing) {
+        window.location.href = "/index.html";
+      }
+
+      const form = document.getElementById("registerForm");
+      const errorEl = document.getElementById("registerError");
+
+      async function completeRegistration(credential, profile) {
+        await authApi.register({
+          name: profile.name,
+          email: profile.email || credential.user.email,
+          country: profile.country,
+          goal: profile.goal
+        });
+        window.location.href = "/index.html";
+      }
+
+      form.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        errorEl.textContent = "";
+
+        const profile = {
+          name: document.getElementById("name").value.trim(),
+          email: document.getElementById("email").value.trim(),
+          country: document.getElementById("country").value,
+          goal: document.getElementById("goal").value
+        };
+        const password = document.getElementById("password").value;
+
+        try {
+          const credential = await registerWithEmail(profile.email, password);
+          await completeRegistration(credential, profile);
+        } catch (error) {
+          errorEl.textContent = error.message || "Registration failed.";
+        }
+      });
+
+      document.getElementById("googleRegister").addEventListener("click", async () => {
+        errorEl.textContent = "";
+        try {
+          const credential = await loginWithGoogle(true);
+          const name = credential.user.displayName || "User";
+          await completeRegistration(credential, {
+            name,
+            email: credential.user.email,
+            country: "US",
+            goal: "climate"
+          });
+        } catch (error) {
+          if (error.message?.includes("already")) {
+            window.location.href = "/index.html";
+            return;
+          }
+          errorEl.textContent = error.message || "Google sign-up failed.";
+        }
+      });
+    </script>
+  </body>
+</html>

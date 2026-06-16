@@ -1,0 +1,80 @@
+import User from "../models/User.js";
+
+/**
+ * Register a new user profile in MongoDB after Firebase account creation.
+ */
+export async function registerUser(firebaseUID, profile) {
+  const existing = await User.findOne({ firebaseUID });
+  if (existing) {
+    return existing;
+  }
+
+  const emailTaken = await User.findOne({ email: profile.email.toLowerCase() });
+  if (emailTaken) {
+    const error = new Error("Email already registered");
+    error.status = 409;
+    throw error;
+  }
+
+  return User.create({
+    firebaseUID,
+    name: profile.name,
+    email: profile.email.toLowerCase(),
+    country: profile.country || "US",
+    goal: profile.goal || profile.motivation || "climate",
+    annualTarget: profile.annualTarget || 7800,
+    motivation: profile.goal || profile.motivation || "climate",
+    avatar: profile.name?.charAt(0)?.toUpperCase() || "U",
+    onboarded: true
+  });
+}
+
+/**
+ * Get user profile by Firebase UID.
+ */
+export async function getUserByFirebaseUID(firebaseUID) {
+  return User.findOne({ firebaseUID });
+}
+
+/**
+ * Update user profile fields.
+ */
+export async function updateUserProfile(firebaseUID, updates) {
+  const allowed = [
+    "name", "country", "goal", "annualTarget", "location", "household",
+    "motivation", "commute", "beef", "renewable", "consent", "avatar",
+    "theme", "onboarded", "started", "dismissed", "joinedChallenges", "completedChallenges"
+  ];
+
+  const sanitized = {};
+  for (const key of allowed) {
+    if (updates[key] !== undefined) sanitized[key] = updates[key];
+  }
+
+  if (sanitized.name) {
+    sanitized.avatar = sanitized.name.charAt(0).toUpperCase();
+  }
+
+  return User.findOneAndUpdate({ firebaseUID }, sanitized, { new: true, runValidators: true });
+}
+
+/**
+ * Convert MongoDB user to frontend state.user shape.
+ */
+export function toClientUser(user) {
+  return {
+    name: user.name,
+    location: user.location || "",
+    country: user.country,
+    household: user.household,
+    motivation: user.motivation || user.goal,
+    commute: user.commute,
+    beef: user.beef,
+    renewable: user.renewable,
+    target: user.annualTarget,
+    consent: user.consent,
+    avatar: user.avatar,
+    email: user.email,
+    goal: user.goal
+  };
+}
