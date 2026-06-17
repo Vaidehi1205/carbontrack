@@ -2,6 +2,7 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 import { buildEmissionContext, calculateScores, getUserActivities } from "./analyticsService.js";
 
 let genAI = null;
+const DEFAULT_GEMINI_MODEL = "gemini-2.0-flash";
 
 function getGemini() {
   if (!process.env.GEMINI_API_KEY) {
@@ -21,7 +22,7 @@ function buildCoachPrompt(context, userMessage) {
     .map(([cat, pct]) => `${cat.charAt(0).toUpperCase() + cat.slice(1)}: ${pct}%`)
     .join("\n");
 
-  return `You are Carbon Coach, an expert sustainability advisor for CarbonTrack.
+  return `You are Carbon Coach, an expert sustainability advisor inside CarbonTrack.
 
 User Profile:
 - Name: ${context.userName}
@@ -36,9 +37,13 @@ Trend: ${context.trend}
 Top Emission Sources: ${context.topSources.join(", ") || "None logged"}
 Total Recent Emissions: ${context.totalRecentKg} kg CO2e
 
-Provide personalized, actionable sustainability advice. Be concise, friendly, and specific.
-Reference the user's data when relevant. Suggest concrete next steps.
-Keep responses under 200 words unless the user asks for detail.
+Instructions:
+- Answer the user's exact question first.
+- Use the user's logged data when it helps, but do not invent data.
+- If data is limited, say what to log next and still give useful general guidance.
+- Give 2-4 concrete next steps with estimated impact when possible.
+- Keep the response under 180 words.
+- Use plain text only. Do not use markdown tables, code blocks, or JSON.
 
 User question: ${userMessage}`;
 }
@@ -51,13 +56,33 @@ function isGeminiQuotaError(error) {
 function buildCoachFallbackAnswer(context, userMessage) {
   const topCategory = Object.entries(context.breakdown).sort((a, b) => b[1] - a[1])[0];
   const category = topCategory ? topCategory[0] : "transportation";
+  const question = userMessage.toLowerCase();
+  const dataLine = context.activityCount
+    ? `You have ${context.activityCount} recent activities and ${context.totalRecentKg} kg CO2e logged in the last 30 days.`
+    : "You do not have much recent activity data yet, so this is a starter recommendation.";
 
-  return [
-    "I’m having trouble reaching the AI service right now, but I can still help based on your logged activity.",
-    `Your biggest impact area appears to be ${category}.`,
-    `For "${userMessage}", try one small change this week: reduce ${category} by 10%, swap one meal to plant-based, or log activities daily to spot patterns.`,
-    `You have ${context.activityCount} recent activities and ${context.totalRecentKg} kg CO2e logged in the last 30 days.`
-  ].join(" ");
+  if (question.includes("target") || question.includes("track")) {
+    return `${dataLine} Your current trend is ${context.trend.toLowerCase()}. To stay on target, focus first on ${category}, log activity daily for the next week, and compare the weekly total against last week.`;
+  }
+
+  if (question.includes("reduce") || question.includes("lower") || question.includes("save")) {
+    return `${dataLine} Your best starting point is ${category}. Try cutting that category by 10% this week, replacing one high-impact habit with a lower-carbon option, and checking your dashboard trend after seven days.`;
+  }
+
+  if (question.includes("biggest") || question.includes("improve")) {
+    return `${dataLine} The biggest improvement opportunity appears to be ${category}. Start there, then add one plant-based meal and one low-carbon trip so your progress is visible across multiple categories.`;
+  }
+
+  return `${dataLine} For "${userMessage}", I would start with ${category}: make one smaller swap this week, keep logging daily, and review whether your next weekly total moves down.`;
+}
+
+function cleanCoachResponse(text) {
+  return String(text || "")
+    .replace(/```[\s\S]*?```/g, "")
+    .replace(/\*\*/g, "")
+    .replace(/\r/g, "")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
 }
 
 /**
@@ -77,9 +102,23 @@ export async function generateCoachResponse(user, userMessage) {
   }
 
   try {
-    const model = getGemini().getGenerativeModel({ model: "gemini-2.0-flash" });
+    const model = getGemini().getGenerativeModel({
+      model: process.env.GEMINI_MODEL || DEFAULT_GEMINI_MODEL,
+      generationConfig: {
+        temperature: 0.45,
+        maxOutputTokens: 420
+      }
+    });
     const result = await model.generateContent(prompt);
-    const text = result.response.text();
+    const text = cleanCoachResponse(result.response.text());
+
+    if (!text || text.length < 20) {
+      return {
+        answer: buildCoachFallbackAnswer(context, userMessage),
+        context,
+        aiGenerated: false
+      };
+    }
 
     return { answer: text, context, aiGenerated: true };
   } catch (error) {

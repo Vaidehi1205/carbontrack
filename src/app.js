@@ -222,9 +222,6 @@ function renderOnboarding() {
         <label>Usual commute
           <select id="commuteSetup">${Object.entries(factors.transportation).map(([key, item]) => option(key, item.label, state.user.commute)).join("")}</select>
         </label>
-        <label>Beef frequency
-          <select id="beefSetup">${["daily", "3-5x/week", "1-2x/week", "rarely", "never"].map((x) => option(x, x, state.user.beef)).join("")}</select>
-        </label>
         <label class="range-line">Renewable energy <input id="renewableSetup" type="range" min="0" max="100" value="${state.user.renewable}" /><strong id="renewableRead">${state.user.renewable}%</strong></label>
         <button class="primary-button" type="submit">Start tracking</button>
       </form>
@@ -243,7 +240,6 @@ function renderOnboarding() {
       household: Number(valueOf("householdSetup")),
       motivation: valueOf("motivationSetup"),
       commute: valueOf("commuteSetup"),
-      beef: valueOf("beefSetup"),
       renewable: Number(valueOf("renewableSetup")),
       avatar: valueOf("nameSetup").slice(0, 1).toUpperCase()
     };

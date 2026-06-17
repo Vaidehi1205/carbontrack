@@ -12,7 +12,6 @@ const factors = {
     renewable_credit: { label: "Renewable energy credit", unit: "kWh", factor: -0.22, icon: "✓" }
   },
   food: {
-    beef_meal: { label: "Beef meal", unit: "serving", factor: 7.6, icon: "🍽" },
     chicken_meal: { label: "Chicken meal", unit: "serving", factor: 1.8, icon: "🍽" },
     dairy: { label: "Dairy serving", unit: "serving", factor: 1.4, icon: "🥛" },
     plant_meal: { label: "Plant-based meal", unit: "serving", factor: 0.7, icon: "🥗" }
@@ -31,7 +30,7 @@ const factors = {
 
 const recommendations = [
   { id: "transit", category: "transportation", title: "Switch 2 car commutes to transit", text: "Your driving entries make this one of the highest leverage changes.", impact: 410, savings: 1840, effort: "Easy" },
-  { id: "meatless", category: "food", title: "Try two plant-based dinners weekly", text: "Replacing beef meals has a fast weekly impact without changing every meal.", impact: 320, savings: 460, effort: "Easy" },
+  { id: "meatless", category: "food", title: "Try two plant-based dinners weekly", text: "Adding plant-based meals can lower food emissions without changing every meal.", impact: 320, savings: 460, effort: "Easy" },
   { id: "renewable", category: "energy", title: "Move part of your electricity to renewables", text: "A 50% renewable plan can reduce energy emissions while keeping routines intact.", impact: 620, savings: 120, effort: "Medium" },
   { id: "reuse", category: "shopping", title: "Buy secondhand for your next clothing item", text: "Shopping emissions are spiky. This keeps the next spike lower.", impact: 140, savings: 260, effort: "Easy" },
   { id: "compost", category: "waste", title: "Compost food scraps twice a week", text: "Waste is a smaller category, but composting builds a reliable habit loop.", impact: 80, savings: 30, effort: "Medium" }
@@ -58,7 +57,7 @@ const sampleActivities = [
   activity("food", "plant_meal", -6, 2, "Lunch"),
   activity("energy", "electricity", -5, 18, "Home use"),
   activity("transportation", "bus", -4, 14, "Office day"),
-  activity("food", "beef_meal", -3, 1, "Dinner"),
+  activity("food", "chicken_meal", -3, 1, "Dinner"),
   activity("waste", "recycled", -2, 2, "Recycling"),
   activity("shopping", "clothing", -1, 1, "Work shirt"),
   activity("transportation", "bike_walk", 0, 5, "Errands")
@@ -97,7 +96,6 @@ function loadState() {
       household: 2,
       motivation: "climate",
       commute: "car_petrol",
-      beef: "1-2x/week",
       renewable: 18,
       target: 7800,
       consent: false
@@ -213,11 +211,6 @@ function renderOnboarding() {
             ${Object.entries(factors.transportation).map(([key, item]) => `<option value="${key}" ${state.user.commute === key ? "selected" : ""}>${item.label}</option>`).join("")}
           </select>
         </label>
-        <label>Beef frequency
-          <select id="beefSetup">
-            ${["daily", "3-5x/week", "1-2x/week", "rarely", "never"].map((x) => `<option ${state.user.beef === x ? "selected" : ""}>${x}</option>`).join("")}
-          </select>
-        </label>
         <label class="range-line">Renewable energy <input id="renewableSetup" type="range" min="0" max="100" value="${state.user.renewable}" /><strong id="renewableRead">${state.user.renewable}%</strong></label>
         <button class="primary-button" type="submit">Start tracking</button>
       </form>
@@ -235,7 +228,6 @@ function renderOnboarding() {
       household: Number(value("householdSetup")),
       motivation: value("motivationSetup"),
       commute: value("commuteSetup"),
-      beef: value("beefSetup"),
       renewable: Number(value("renewableSetup"))
     };
     state.onboarded = true;

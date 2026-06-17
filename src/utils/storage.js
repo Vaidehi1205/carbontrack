@@ -24,7 +24,6 @@ export function defaultAppState() {
       household: 2,
       motivation: "climate",
       commute: "car_petrol",
-      beef: "1-2x/week",
       renewable: 18,
       target: 7800,
       consent: false,

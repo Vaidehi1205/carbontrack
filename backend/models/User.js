@@ -13,7 +13,6 @@ const userSchema = new mongoose.Schema(
     household: { type: Number, default: 2 },
     motivation: { type: String, default: "climate" },
     commute: { type: String, default: "car_petrol" },
-    beef: { type: String, default: "1-2x/week" },
     renewable: { type: Number, default: 18 },
     consent: { type: Boolean, default: false },
     avatar: { type: String, default: "A" },

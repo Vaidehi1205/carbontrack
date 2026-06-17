@@ -14,12 +14,12 @@ export const recommendationActions = [
     id: "meatless",
     category: "food",
     title: "Try two plant-based dinners weekly",
-    text: "Replacing beef meals has a fast weekly impact without changing every meal.",
+    text: "Adding plant-based meals can lower food emissions without changing every meal.",
     impact: 320,
     savings: 460,
     effort: "Easy",
     difficulty: 1,
-    triggerTypes: ["beef_meal", "chicken_meal"]
+    triggerTypes: ["chicken_meal", "dairy"]
   },
   {
     id: "renewable",

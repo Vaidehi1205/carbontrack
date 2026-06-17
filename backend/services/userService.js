@@ -42,7 +42,7 @@ export async function getUserByFirebaseUID(firebaseUID) {
 export async function updateUserProfile(firebaseUID, updates) {
   const allowed = [
     "name", "country", "goal", "annualTarget", "location", "household",
-    "motivation", "commute", "beef", "renewable", "consent", "avatar",
+    "motivation", "commute", "renewable", "consent", "avatar",
     "theme", "onboarded", "started", "dismissed", "joinedChallenges", "completedChallenges",
     "currentStreak", "longestStreak", "points", "badges"
   ];
@@ -70,7 +70,6 @@ export function toClientUser(user) {
     household: user.household,
     motivation: user.motivation || user.goal,
     commute: user.commute,
-    beef: user.beef,
     renewable: user.renewable,
     target: user.annualTarget,
     consent: user.consent,
