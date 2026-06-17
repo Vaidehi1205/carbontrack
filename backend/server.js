@@ -23,6 +23,8 @@ const app = express();
 const PORT = Number(process.env.PORT || 4173);
 const HOST = "0.0.0.0";
 
+app.set("trust proxy", 1);
+
 try {
   await connectDB();
 } catch (error) {
