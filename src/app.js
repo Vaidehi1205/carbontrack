@@ -86,6 +86,7 @@ async function bootstrap() {
     if (state.ui.activeView === "coach") {
       await loadChatData();
       render();
+        bindCoach();
     }
     loadAiInsights();
   } catch (error) {
@@ -170,13 +171,21 @@ function render() {
   els.todayLabel.textContent = new Intl.DateTimeFormat("en", { weekday: "long", month: "short", day: "numeric" }).format(new Date());
   els.pointsPill.textContent = `${pointsFor(state)} pts`;
   renderOnboarding();
-  Object.entries(views).forEach(([id, view]) => {
-    document.getElementById(`${id}View`).innerHTML = view(state);
-  });
-  showView(state.ui.activeView);
+  renderActiveView();
   bindEvents();
-  renderCharts();
   saveUiState(state);
+}
+
+function renderActiveView() {
+  const view = PROTECTED_VIEWS.includes(state.ui.activeView) ? state.ui.activeView : "dashboard";
+  const container = document.getElementById(`${view}View`);
+
+  if (container) {
+    container.innerHTML = views[view](state);
+  }
+
+  showView(view);
+  renderCharts();
 }
 
 function renderOnboarding() {
@@ -331,7 +340,7 @@ function bindCoach() {
     state.chat.messages.push({ role: "user", text: message, timestamp: new Date().toISOString() });
     state.chat.typing = true;
     input.value = "";
-    document.getElementById("coachView").innerHTML = coachView(state);
+    renderActiveView();
     scrollChatToBottom();
 
     try {
@@ -343,7 +352,7 @@ function bindCoach() {
     }
 
     state.chat.typing = false;
-    document.getElementById("coachView").innerHTML = coachView(state);
+    renderActiveView();
     bindCoach();
     scrollChatToBottom();
   });
@@ -361,7 +370,7 @@ function bindCoach() {
       debounce = setTimeout(async () => {
         state.chat.search = event.target.value;
         await loadChatData();
-        document.getElementById("coachView").innerHTML = coachView(state);
+        renderActiveView();
         bindCoach();
       }, 300);
     });
@@ -374,7 +383,7 @@ function bindCoach() {
       { role: "user", text: item.question, timestamp: item.timestamp },
       { role: "coach", text: item.answer, timestamp: item.timestamp }
     ];
-    document.getElementById("coachView").innerHTML = coachView(state);
+    renderActiveView();
     bindCoach();
     scrollChatToBottom();
   }));
@@ -384,7 +393,7 @@ function bindCoach() {
       await chatbotApi.delete(button.dataset.deleteChat);
       await loadChatData();
       toast("Chat deleted.", "−");
-      document.getElementById("coachView").innerHTML = coachView(state);
+      renderActiveView();
       bindCoach();
     } catch (error) {
       toast("Delete failed: " + error.message, "!");

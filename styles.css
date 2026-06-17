@@ -557,26 +557,29 @@ textarea {
 }
 
 :root[data-theme="dark"] {
-  --ink: #ecf5ef;
-  --muted: #a8b8b1;
-  --line: #2a4037;
-  --paper: #0c1411;
-  --panel: #121e19;
-  --sage: #63c995;
-  --sage-dark: #69d3a1;
-  --aqua: #4fc4d0;
-  --amber: #e5a852;
-  --rose: #ec7f83;
-  --violet: #a69af0;
-  --shadow: 0 18px 60px rgba(0, 0, 0, 0.36);
-  --soft-shadow: 0 10px 30px rgba(0, 0, 0, 0.26);
+  --ink: #f1fbf6;
+  --muted: #97aba3;
+  --line: #234035;
+  --paper: #07100d;
+  --panel: #0f1814;
+  --sage: #73d6a0;
+  --sage-dark: #61c88e;
+  --aqua: #56ccd7;
+  --amber: #f0b35f;
+  --rose: #f08a90;
+  --violet: #b1a7ff;
+  --shadow: 0 22px 72px rgba(0, 0, 0, 0.48);
+  --soft-shadow: 0 14px 34px rgba(0, 0, 0, 0.34);
   color-scheme: dark;
 }
 
 :root[data-theme="dark"] body {
   background:
-    radial-gradient(circle at top left, rgba(79, 196, 208, 0.15), transparent 30rem),
-    linear-gradient(135deg, #08110e 0%, #0f1a16 48%, #18150e 100%);
+    radial-gradient(circle at top left, rgba(86, 204, 215, 0.18), transparent 26rem),
+    radial-gradient(circle at top right, rgba(97, 200, 142, 0.16), transparent 24rem),
+    radial-gradient(circle at 55% 110%, rgba(240, 179, 95, 0.12), transparent 28rem),
+    linear-gradient(140deg, #06100d 0%, #0c1713 38%, #111b17 72%, #171410 100%);
+  background-attachment: fixed;
 }
 
 body,
@@ -596,7 +599,9 @@ select,
 :root[data-theme="dark"] .sidebar,
 :root[data-theme="dark"] .card,
 :root[data-theme="dark"] .modal-card {
-  background: rgba(18, 30, 25, 0.88);
+  background: linear-gradient(180deg, rgba(18, 30, 25, 0.94), rgba(12, 21, 18, 0.9));
+  border-color: rgba(115, 214, 160, 0.14);
+  backdrop-filter: blur(22px);
 }
 
 :root[data-theme="dark"] .sidebar-panel,
@@ -606,11 +611,13 @@ select,
 :root[data-theme="dark"] .icon-button,
 :root[data-theme="dark"] .chip,
 :root[data-theme="dark"] .quick-button {
-  background: #101b17;
+  background: #0d1613;
+  border-color: rgba(115, 214, 160, 0.16);
 }
 
 :root[data-theme="dark"] .nav button.active {
-  background: rgba(99, 201, 149, 0.16);
+  background: linear-gradient(90deg, rgba(115, 214, 160, 0.22), rgba(86, 204, 215, 0.12));
+  box-shadow: inset 3px 0 0 var(--sage);
 }
 
 .theme-line,
@@ -635,7 +642,7 @@ select,
   height: 28px;
   border: 1px solid var(--line);
   border-radius: 999px;
-  background: #e8f0ec;
+  background: linear-gradient(180deg, #edf5f1, #dfeae5);
   padding: 3px;
 }
 
@@ -649,7 +656,8 @@ select,
 }
 
 .theme-toggle.active {
-  background: #21352e;
+  background: linear-gradient(180deg, #13201b, #0d1714);
+  box-shadow: inset 0 0 0 1px rgba(115, 214, 160, 0.14);
 }
 
 .theme-toggle.active span {
@@ -668,7 +676,14 @@ select,
 }
 
 :root[data-theme="dark"] .points-pill {
-  background: #101b17;
+  background: linear-gradient(180deg, #0d1714, #0a120f);
+}
+
+:root[data-theme="dark"] .nav button:hover,
+:root[data-theme="dark"] .quick-button:hover,
+:root[data-theme="dark"] .ghost-button:hover,
+:root[data-theme="dark"] .icon-button:hover {
+  background: rgba(115, 214, 160, 0.09);
 }
 
 .nav button:hover,
@@ -692,6 +707,13 @@ button:disabled {
 
 .card {
   box-shadow: var(--soft-shadow);
+}
+
+:root[data-theme="dark"] .card,
+:root[data-theme="dark"] .sidebar,
+:root[data-theme="dark"] .modal-card,
+:root[data-theme="dark"] .sidebar-panel {
+  box-shadow: 0 18px 56px rgba(0, 0, 0, 0.44);
 }
 
 canvas {
@@ -719,6 +741,10 @@ canvas {
   border-color: var(--sage);
 }
 
+:root[data-theme="dark"] .quick-button {
+  background: linear-gradient(180deg, rgba(16, 27, 22, 0.92), rgba(10, 18, 15, 0.92));
+}
+
 .control-card {
   box-shadow: var(--soft-shadow);
 }
@@ -738,6 +764,12 @@ textarea:focus {
   box-shadow: 0 0 0 3px rgba(79, 143, 111, 0.16);
 }
 
+:root[data-theme="dark"] input:focus,
+:root[data-theme="dark"] select:focus,
+:root[data-theme="dark"] textarea:focus {
+  box-shadow: 0 0 0 3px rgba(115, 214, 160, 0.16);
+}
+
 .form-error {
   color: var(--rose);
   font-weight: 700;
@@ -754,6 +786,30 @@ textarea:focus {
 
 .toast.show {
   opacity: 1;
+}
+
+:root[data-theme="dark"] .toast {
+  background: linear-gradient(180deg, rgba(8, 15, 13, 0.96), rgba(13, 22, 18, 0.96));
+  border: 1px solid rgba(115, 214, 160, 0.16);
+}
+
+:root[data-theme="dark"] .bar {
+  background: #15231d;
+}
+
+:root[data-theme="dark"] .pill,
+:root[data-theme="dark"] .effort {
+  background: rgba(115, 214, 160, 0.12);
+  color: var(--sage);
+}
+
+:root[data-theme="dark"] .empty,
+:root[data-theme="dark"] .calculation-preview {
+  background: rgba(9, 16, 13, 0.9);
+}
+
+:root[data-theme="dark"] .hero-visual {
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
 }
 
 .toast-icon {
