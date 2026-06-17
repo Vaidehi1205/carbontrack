@@ -76,6 +76,7 @@
       const form = document.getElementById("registerForm");
       const errorEl = document.getElementById("registerError");
       const passwordInput = document.getElementById("password");
+      const googleButton = document.getElementById("googleRegister");
 
       if (existing) {
         console.log("[Register] Firebase user signed in, awaiting profile completion");
@@ -96,6 +97,15 @@
         });
         console.log("[Register] User registered successfully, redirecting to app");
         window.location.href = "/index.html";
+      }
+
+      function friendlyAuthError(error, fallback) {
+        const message = error.message || fallback;
+        if (message.includes("popup-closed-by-user")) return "Google sign-up was cancelled.";
+        if (message.includes("popup-blocked")) return "Your browser blocked the Google sign-up popup. Allow popups for this site and try again.";
+        if (message.includes("CONFIGURATION_NOT_FOUND")) return "Firebase Google sign-in is not configured correctly.";
+        if (message.includes("account-exists-with-different-credential")) return "An account already exists with this email. Sign in with email and password first.";
+        return message;
       }
 
       form.addEventListener("submit", async (event) => {
@@ -130,8 +140,10 @@
         }
       });
 
-      document.getElementById("googleRegister").addEventListener("click", async () => {
+      googleButton.addEventListener("click", async () => {
         errorEl.textContent = "";
+        googleButton.disabled = true;
+        googleButton.textContent = "Connecting...";
         try {
           const credential = await loginWithGoogle(true);
           const name = credential.user.displayName || "User";
@@ -146,7 +158,9 @@
             window.location.href = "/index.html";
             return;
           }
-          errorEl.textContent = error.message || "Google sign-up failed.";
+          errorEl.textContent = friendlyAuthError(error, "Google sign-up failed.");
+          googleButton.disabled = false;
+          googleButton.textContent = "Sign up with Google";
         }
       });
     </script>

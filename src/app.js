@@ -18,7 +18,7 @@ import {
 import { createId, downloadFile, escapeHtml, formatKg, title, todayKey } from "./utils/helpers.js";
 import { validateActivity } from "./utils/validation.js";
 import { fetchConfig, activitiesApi, authApi, dashboardApi, chatbotApi, usersApi } from "./services/api.js";
-import { initFirebase, requireAuth, logout, waitForAuth } from "./services/auth.js";
+import { initFirebase, requireAuth, logout } from "./services/auth.js";
 
 const PROTECTED_VIEWS = ["dashboard", "activities", "insights", "coach", "recommendations", "challenges", "profile"];
 
@@ -78,16 +78,14 @@ async function bootstrap() {
       return;
     }
 
-    console.log("[Bootstrap] User authenticated, loading data...");
-    await loadRemoteData(user);
+    console.log("[Bootstrap] User authenticated, loading profile...");
+    loadUiPreferences();
+    await loadUserProfile(user);
     apiReady = true;
-    console.log("[Bootstrap] Data loaded, rendering app");
+    console.log("[Bootstrap] Profile loaded, rendering app");
     render();
-    if (state.ui.activeView === "coach") {
-      await loadChatData();
-      render();
-        bindCoach();
-    }
+    loadActivitiesData();
+    if (state.ui.activeView === "coach") loadChatData({ rerender: true });
     loadAiInsights();
   } catch (error) {
     console.error("Bootstrap error:", error);
@@ -95,12 +93,15 @@ async function bootstrap() {
   }
 }
 
-/** Load user profile and activities from the API. */
-async function loadRemoteData(firebaseUser) {
+/** Load saved UI preferences before remote data arrives. */
+function loadUiPreferences() {
   const uiSaved = loadUiState();
   state.theme = uiSaved.theme || "light";
   state.ui = { ...state.ui, ...uiSaved.ui };
+}
 
+/** Load user profile from the API. */
+async function loadUserProfile(firebaseUser) {
   try {
     const { user, meta } = await authApi.me();
     state.user = { ...state.user, ...user, target: user.target || user.annualTarget || 7800 };
@@ -117,7 +118,10 @@ async function loadRemoteData(firebaseUser) {
     }
     throw error;
   }
+}
 
+/** Load activities after the app shell is interactive. */
+async function loadActivitiesData() {
   try {
     const { activities } = await activitiesApi.list();
     state.activities = activities;
@@ -132,6 +136,8 @@ async function loadRemoteData(firebaseUser) {
         toast("Local activities synced to cloud.", "☁");
       }
     }
+    render();
+    loadAiInsights();
   } catch (error) {
     console.warn("Activities load failed:", error.message);
   }
@@ -152,7 +158,7 @@ async function loadAiInsights() {
 }
 
 /** Load chat history and suggestions for Carbon Coach. */
-async function loadChatData() {
+async function loadChatData({ rerender = false } = {}) {
   try {
     const [historyRes, suggestionsRes] = await Promise.all([
       chatbotApi.history(state.chat.search),
@@ -160,6 +166,11 @@ async function loadChatData() {
     ]);
     state.chat.history = historyRes.chats || [];
     state.chat.suggestions = suggestionsRes.suggestions || [];
+    if (rerender && state.ui.activeView === "coach") {
+      renderActiveView();
+      bindCoach();
+      scrollChatToBottom();
+    }
   } catch {
     /* Chat data is optional on first load */
   }
@@ -275,10 +286,10 @@ function renderCharts() {
 function bindEvents() {
   document.querySelectorAll("[data-view]").forEach((button) => button.addEventListener("click", async () => {
     state.ui.activeView = button.dataset.view;
-    if (button.dataset.view === "coach") {
-      await loadChatData();
-    }
     render();
+    if (button.dataset.view === "coach") {
+      loadChatData({ rerender: true });
+    }
     if (button.dataset.view === "coach") scrollChatToBottom();
   }));
 
@@ -342,7 +353,7 @@ function bindCoach() {
     try {
       const response = await chatbotApi.send(message);
       state.chat.messages.push({ role: "coach", text: response.answer, timestamp: response.timestamp });
-      await loadChatData();
+      loadChatData();
     } catch (error) {
       state.chat.messages.push({ role: "coach", text: "Sorry, I couldn't process that. " + error.message, timestamp: new Date().toISOString() });
     }

@@ -21,6 +21,7 @@ import {
 let auth = null;
 let currentUser = null;
 let authReady = false;
+let authUnsubscribe = null;
 const authListeners = [];
 
 /**
@@ -33,6 +34,14 @@ export async function initFirebase(config) {
     projectId: config.projectId
   });
   auth = getAuth(app);
+  if (!authUnsubscribe) {
+    authUnsubscribe = onAuthStateChanged(auth, (user) => {
+      currentUser = user;
+      authReady = true;
+      console.log("[Auth] State changed:", user ? `${user.email}` : "logged out");
+      authListeners.splice(0).forEach((fn) => fn(user));
+    });
+  }
   return auth;
 }
 
@@ -46,14 +55,7 @@ export function waitForAuth() {
       return;
     }
     authListeners.push(resolve);
-    if (auth) {
-      onAuthStateChanged(auth, (user) => {
-        currentUser = user;
-        authReady = true;
-        console.log("[Auth] State changed:", user ? `${user.email}` : "logged out");
-        authListeners.splice(0).forEach((fn) => fn(user));
-      });
-    } else {
+    if (!auth) {
       // If auth not initialized yet, resolve with null after a short delay
       setTimeout(() => {
         console.warn("[Auth] Auth not initialized");
@@ -71,7 +73,7 @@ export function getCurrentUser() {
 export async function getCurrentToken() {
   const user = currentUser || auth?.currentUser;
   if (!user) return null;
-  return user.getIdToken(true);
+  return user.getIdToken();
 }
 
 /**

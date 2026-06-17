@@ -72,6 +72,30 @@
 
       const form = document.getElementById("loginForm");
       const errorEl = document.getElementById("loginError");
+      const googleButton = document.getElementById("googleLogin");
+
+      async function ensureGoogleProfile(user) {
+        try {
+          await authApi.me();
+        } catch (error) {
+          if (error.message !== "Profile not found") throw error;
+          await authApi.register({
+            name: user.displayName || user.email?.split("@")[0] || "User",
+            email: user.email,
+            country: "US",
+            goal: "climate"
+          });
+        }
+      }
+
+      function friendlyAuthError(error, fallback) {
+        const message = error.message || fallback;
+        if (message.includes("popup-closed-by-user")) return "Google sign-in was cancelled.";
+        if (message.includes("popup-blocked")) return "Your browser blocked the Google sign-in popup. Allow popups for this site and try again.";
+        if (message.includes("CONFIGURATION_NOT_FOUND")) return "Firebase Google sign-in is not configured correctly.";
+        if (message.includes("account-exists-with-different-credential")) return "An account already exists with this email. Sign in with email and password first.";
+        return message;
+      }
 
       form.addEventListener("submit", async (event) => {
         event.preventDefault();
@@ -99,15 +123,20 @@
         }
       });
 
-      document.getElementById("googleLogin").addEventListener("click", async () => {
+      googleButton.addEventListener("click", async () => {
         errorEl.textContent = "";
         const remember = document.getElementById("remember").checked;
+        googleButton.disabled = true;
+        googleButton.textContent = "Connecting...";
         try {
-          await loginWithGoogle(remember);
+          const credential = await loginWithGoogle(remember);
+          await ensureGoogleProfile(credential.user);
           console.log("[Login] Google login successful, redirecting to app");
           window.location.href = "/index.html";
         } catch (error) {
-          errorEl.textContent = error.message || "Google sign-in failed.";
+          errorEl.textContent = friendlyAuthError(error, "Google sign-in failed.");
+          googleButton.disabled = false;
+          googleButton.textContent = "Continue with Google";
         }
       });
     </script>
