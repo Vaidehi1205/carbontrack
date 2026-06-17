@@ -43,6 +43,23 @@ Keep responses under 200 words unless the user asks for detail.
 User question: ${userMessage}`;
 }
 
+function isGeminiQuotaError(error) {
+  const message = String(error?.message || "");
+  return message.includes("429") || message.toLowerCase().includes("quota");
+}
+
+function buildCoachFallbackAnswer(context, userMessage) {
+  const topCategory = Object.entries(context.breakdown).sort((a, b) => b[1] - a[1])[0];
+  const category = topCategory ? topCategory[0] : "transportation";
+
+  return [
+    "I’m having trouble reaching the AI service right now, but I can still help based on your logged activity.",
+    `Your biggest impact area appears to be ${category}.`,
+    `For "${userMessage}", try one small change this week: reduce ${category} by 10%, swap one meal to plant-based, or log activities daily to spot patterns.`,
+    `You have ${context.activityCount} recent activities and ${context.totalRecentKg} kg CO2e logged in the last 30 days.`
+  ].join(" ");
+}
+
 /**
  * Generate a Carbon Coach response using Gemini.
  */
@@ -51,11 +68,33 @@ export async function generateCoachResponse(user, userMessage) {
   const context = buildEmissionContext(user, activities);
   const prompt = buildCoachPrompt(context, userMessage);
 
-  const model = getGemini().getGenerativeModel({ model: "gemini-2.0-flash" });
-  const result = await model.generateContent(prompt);
-  const text = result.response.text();
+  if (!process.env.GEMINI_API_KEY) {
+    return {
+      answer: buildCoachFallbackAnswer(context, userMessage),
+      context,
+      aiGenerated: false
+    };
+  }
 
-  return { answer: text, context };
+  try {
+    const model = getGemini().getGenerativeModel({ model: "gemini-2.0-flash" });
+    const result = await model.generateContent(prompt);
+    const text = result.response.text();
+
+    return { answer: text, context, aiGenerated: true };
+  } catch (error) {
+    if (isGeminiQuotaError(error)) {
+      console.warn("Gemini quota reached, using fallback Carbon Coach response.");
+    } else {
+      console.warn("Gemini request failed, using fallback Carbon Coach response.");
+    }
+
+    return {
+      answer: buildCoachFallbackAnswer(context, userMessage),
+      context,
+      aiGenerated: false
+    };
+  }
 }
 
 /**
