@@ -11,5 +11,6 @@ const challengeSchema = new mongoose.Schema(
 );
 
 challengeSchema.index({ userId: 1, challengeName: 1 }, { unique: true });
+challengeSchema.index({ status: 1 });
 
 export default mongoose.model("Challenge", challengeSchema);

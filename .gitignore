@@ -1,4 +1,6 @@
 node_modules/
 .env
+.npm-cache/
+coverage/
 *.log
 .DS_Store

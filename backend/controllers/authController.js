@@ -44,6 +44,10 @@ export const getMe = asyncHandler(async (req, res) => {
       dismissed: user.dismissed,
       joinedChallenges: user.joinedChallenges,
       completedChallenges: user.completedChallenges,
+      currentStreak: user.currentStreak || 0,
+      longestStreak: user.longestStreak || 0,
+      points: user.points || 0,
+      badges: user.badges || [],
       theme: user.theme,
       onboarded: user.onboarded
     }

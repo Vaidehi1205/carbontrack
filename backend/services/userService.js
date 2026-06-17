@@ -43,7 +43,8 @@ export async function updateUserProfile(firebaseUID, updates) {
   const allowed = [
     "name", "country", "goal", "annualTarget", "location", "household",
     "motivation", "commute", "beef", "renewable", "consent", "avatar",
-    "theme", "onboarded", "started", "dismissed", "joinedChallenges", "completedChallenges"
+    "theme", "onboarded", "started", "dismissed", "joinedChallenges", "completedChallenges",
+    "currentStreak", "longestStreak", "points", "badges"
   ];
 
   const sanitized = {};
@@ -75,6 +76,10 @@ export function toClientUser(user) {
     consent: user.consent,
     avatar: user.avatar,
     email: user.email,
-    goal: user.goal
+    goal: user.goal,
+    currentStreak: user.currentStreak || 0,
+    longestStreak: user.longestStreak || 0,
+    points: user.points || 0,
+    badges: user.badges || []
   };
 }

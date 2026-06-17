@@ -22,9 +22,17 @@ const userSchema = new mongoose.Schema(
     started: [{ type: String }],
     dismissed: [{ type: String }],
     joinedChallenges: [{ type: String }],
-    completedChallenges: [{ type: String }]
+    completedChallenges: [{ type: String }],
+    currentStreak: { type: Number, default: 0 },
+    longestStreak: { type: Number, default: 0 },
+    points: { type: Number, default: 0 },
+    badges: [{ type: String }]
   },
   { timestamps: true }
 );
+
+userSchema.index({ firebaseUID: 1 }, { unique: true });
+userSchema.index({ email: 1 }, { unique: true });
+userSchema.index({ points: -1 });
 
 export default mongoose.model("User", userSchema);

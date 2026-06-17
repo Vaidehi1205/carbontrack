@@ -1,5 +1,6 @@
 import { body, validationResult } from "express-validator";
 import { updateUserProfile, toClientUser } from "../services/userService.js";
+import { assignBadges } from "../services/badgeService.js";
 import Challenge from "../models/Challenge.js";
 import { asyncHandler } from "../middleware/errorHandler.js";
 
@@ -38,6 +39,10 @@ export const updateProfile = asyncHandler(async (req, res) => {
       dismissed: user.dismissed,
       joinedChallenges: user.joinedChallenges,
       completedChallenges: user.completedChallenges,
+      currentStreak: user.currentStreak || 0,
+      longestStreak: user.longestStreak || 0,
+      points: user.points || 0,
+      badges: user.badges || [],
       theme: user.theme,
       onboarded: user.onboarded
     }
@@ -64,8 +69,10 @@ export const updateChallenge = asyncHandler(async (req, res) => {
 
   const field = action === "complete" ? "completedChallenges" : "joinedChallenges";
   const user = await updateUserProfile(req.firebaseUser.uid, {
-    [field]: [...new Set([...(req.user[field] || []), challengeName])]
+    [field]: [...new Set([...(req.user[field] || []), challengeName])],
+    points: (req.user.points || 0) + rewardPoints
   });
+  await assignBadges(user);
 
   res.json({ challenge, user: toClientUser(user) });
 });

@@ -11,5 +11,6 @@ const chatHistorySchema = new mongoose.Schema(
 );
 
 chatHistorySchema.index({ userId: 1, timestamp: -1 });
+chatHistorySchema.index({ question: "text", answer: "text" });
 
 export default mongoose.model("ChatHistory", chatHistorySchema);

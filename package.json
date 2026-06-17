@@ -7,7 +7,9 @@
     "build": "echo Build completed",
     "start": "node backend/server.js",
     "dev": "node --watch backend/server.js",
-    "install:backend": "npm install --prefix backend"
+    "install:backend": "npm install --prefix backend",
+    "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js",
+    "coverage": "node --experimental-vm-modules node_modules/jest/bin/jest.js --coverage"
   },
   "engines": {
     "node": ">=18"
@@ -24,5 +26,18 @@
     "helmet": "^8.2.0",
     "mongodb": "^7.3.0",
     "mongoose": "^9.7.0"
+  },
+  "devDependencies": {
+    "jest": "^30.4.2",
+    "supertest": "^7.2.2"
+  },
+  "jest": {
+    "testEnvironment": "node",
+    "collectCoverageFrom": [
+      "backend/**/*.js",
+      "!backend/server.js",
+      "!backend/config/firebase.js",
+      "!backend/config/db.js"
+    ]
   }
 }
