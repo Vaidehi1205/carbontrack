@@ -12,7 +12,6 @@ export const factors = {
     renewable_credit: { label: "Renewable credit", unit: "kWh", factor: -0.22, icon: "✓", difficulty: 2 }
   },
   food: {
-    beef_meal: { label: "Beef meal", unit: "serving", factor: 7.6, icon: "🍽", difficulty: 2 },
     chicken_meal: { label: "Chicken meal", unit: "serving", factor: 1.8, icon: "🍽", difficulty: 1 },
     dairy: { label: "Dairy serving", unit: "serving", factor: 1.4, icon: "🥛", difficulty: 1 },
     plant_meal: { label: "Plant-based meal", unit: "serving", factor: 0.7, icon: "🥗", difficulty: 1 }
