@@ -83,6 +83,10 @@ async function bootstrap() {
     apiReady = true;
     console.log("[Bootstrap] Data loaded, rendering app");
     render();
+    if (state.ui.activeView === "coach") {
+      await loadChatData();
+      render();
+    }
     loadAiInsights();
   } catch (error) {
     console.error("Bootstrap error:", error);

@@ -19,7 +19,6 @@ export const factors = {
     heating_oil: { factor: 2.52, unit: "L", label: "Heating oil" }
   },
   food: {
-    beef_meal: { factor: 27, unit: "meal", label: "Beef meal" },
     chicken_meal: { factor: 6.9, unit: "meal", label: "Chicken meal" },
     plant_meal: { factor: 1.5, unit: "meal", label: "Plant-based meal" },
     dairy: { factor: 3.2, unit: "serving", label: "Dairy serving" }
