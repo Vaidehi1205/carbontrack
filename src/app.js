@@ -457,6 +457,14 @@ function bindProfile() {
   if (renewable) renewable.addEventListener("input", (event) => {
     document.getElementById("profileRenewableRead").textContent = `${event.target.value}%`;
   });
+  const themeSelect = document.getElementById("profileTheme");
+  if (themeSelect) themeSelect.addEventListener("change", (event) => {
+    state.theme = event.target.value === "dark" ? "dark" : "light";
+    applyTheme();
+    saveUiState(state);
+    persistMeta();
+    toast(`${title(state.theme)} mode enabled.`, "◐");
+  });
   const form = document.getElementById("profileForm");
   if (form) form.addEventListener("submit", async (event) => {
     event.preventDefault();
@@ -509,6 +517,10 @@ function setupGlobalEvents() {
   document.getElementById("undoBtn").addEventListener("click", undoLastDelete);
   els.themeToggle.addEventListener("click", () => {
     state.theme = state.theme === "dark" ? "light" : "dark";
+    document.getElementById("profileTheme")?.replaceChildren(
+      new Option("Light", "light", false, state.theme === "light"),
+      new Option("Dark", "dark", false, state.theme === "dark")
+    );
     persistMeta();
     toast(`${title(state.theme)} mode enabled.`, "◐");
     render();
