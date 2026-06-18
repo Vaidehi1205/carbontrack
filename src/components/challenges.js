@@ -1,5 +1,6 @@
 import { challenges } from "../data/challenges.js";
-import { formatKg, title } from "../utils/helpers.js";
+import { activitiesInRange, totalCo2 } from "../utils/calculations.js";
+import { escapeHtml, formatKg, title } from "../utils/helpers.js";
 import { featureDescription, progressBar } from "./ui.js";
 
 export function challengesView(state) {
@@ -9,7 +10,7 @@ export function challengesView(state) {
       <div class="card">
         <span class="eyebrow">Community</span>
         <h2>Active challenges</h2>
-        ${challenges.map((challenge, index) => challengeRow(state, challenge, index)).join("")}
+        ${challenges.map((challenge) => challengeRow(state, challenge)).join("")}
       </div>
       <div class="card hero-visual">
         <span class="eyebrow">Shared progress</span>
@@ -20,16 +21,26 @@ export function challengesView(state) {
   `;
 }
 
-function challengeRow(state, challenge, index) {
+export function getChallengeProgress(state, challenge) {
+  const loggedTotal = totalCo2(activitiesInRange(state.activities, challenge.days).filter((activity) => activity.category === challenge.category));
+  return {
+    loggedTotal,
+    percent: Math.min(100, Math.round((loggedTotal / challenge.target) * 100))
+  };
+}
+
+function challengeRow(state, challenge) {
   const joined = state.joinedChallenges.includes(challenge.id);
   const completed = state.completedChallenges.includes(challenge.id);
-  const progress = completed ? 100 : joined ? 38 + index * 12 : 0;
+  const { loggedTotal, percent } = getChallengeProgress(state, challenge);
+  const progress = completed ? 100 : percent;
+  const canComplete = joined && !completed && progress >= 100;
   return `
     <div class="challenge-row">
-      <div class="row" style="justify-content:space-between"><strong>${challenge.title}</strong><span class="pill">${challenge.members + (joined ? 1 : 0)} joined</span></div>
-      <div class="challenge-meta"><span>${title(challenge.category)}</span><span>${challenge.days} days</span><span>${formatKg(challenge.target)} target</span></div>
+      <div class="row" style="justify-content:space-between"><strong>${escapeHtml(challenge.title)}</strong><span class="pill">${challenge.members + (joined ? 1 : 0)} joined</span></div>
+      <div class="challenge-meta"><span>${title(challenge.category)}</span><span>${challenge.days} days</span><span>${formatKg(loggedTotal)} / ${formatKg(challenge.target)}</span></div>
       ${progressBar(progress, completed ? "var(--sage)" : "#2d9caa", challenge.title)}
-      <div class="row"><button class="primary-button" data-join="${challenge.id}" ${joined ? "disabled" : ""}>${joined ? "Joined" : "Join"}</button><button class="ghost-button" data-complete="${challenge.id}" ${!joined || completed ? "disabled" : ""}>${completed ? "Completed" : "Complete"}</button></div>
+      <div class="row"><button class="primary-button" data-join="${escapeHtml(challenge.id)}" ${joined ? "disabled" : ""}>${joined ? "Joined" : "Join"}</button><button class="ghost-button" data-complete="${escapeHtml(challenge.id)}" ${!canComplete ? "disabled" : ""}>${completed ? "Completed" : "Complete"}</button></div>
     </div>
   `;
 }

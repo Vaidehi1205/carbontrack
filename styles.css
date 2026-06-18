@@ -853,6 +853,24 @@ textarea:focus {
   margin-bottom: 16px;
 }
 
+.profile-layout {
+  grid-template-columns: minmax(360px, 1fr) minmax(360px, 1fr);
+  align-items: start;
+}
+
+.profile-settings-card,
+.profile-progress-card {
+  min-width: 0;
+}
+
+.profile-settings-card .form-grid {
+  grid-template-columns: repeat(2, minmax(180px, 1fr));
+}
+
+.profile-actions {
+  flex-wrap: wrap;
+}
+
 .avatar {
   width: 58px;
   height: 58px;
@@ -905,6 +923,11 @@ textarea:focus {
 @media (max-width: 980px) {
   .dashboard-metrics,
   .activity-controls {
+    grid-template-columns: 1fr;
+  }
+
+  .profile-layout,
+  .profile-settings-card .form-grid {
     grid-template-columns: 1fr;
   }
 }

@@ -9,8 +9,8 @@ export function profileView(state) {
   const badges = achievementsFor(state);
   return `
     ${featureDescription("Manage your profile, preferences, exports, and achievement progress.")}
-    <div class="grid two-col">
-      <div class="card">
+    <div class="grid two-col profile-layout">
+      <div class="card profile-settings-card">
         <span class="eyebrow">Settings</span>
         <div class="profile-head">
           <div class="avatar">${escapeHtml(state.user.avatar || state.user.name.slice(0, 1))}</div>
@@ -41,7 +41,7 @@ export function profileView(state) {
           <button class="primary-button" type="submit">Save profile</button>
         </form>
       </div>
-      <div class="card">
+      <div class="card profile-progress-card">
         <span class="eyebrow">Gamification</span>
         <h2>Streaks and achievements</h2>
         <div class="grid three-col">
@@ -56,7 +56,7 @@ export function profileView(state) {
         <div class="achievement-grid">${badges.map((badge) => `<div class="achievement ${badge.unlocked ? "unlocked" : ""}"><strong>${badge.name}</strong><span>${badge.detail}</span></div>`).join("")}</div>
         <h3>Target progress</h3>
         ${progressBar(stats.targetProgress, stats.annualPace <= state.user.target ? "var(--sage)" : "var(--amber)", "Target progress")}
-        <div class="quick-row export-row"><button class="ghost-button" id="exportJsonBtn">Export JSON</button><button class="ghost-button" id="exportCsvBtn">Export CSV</button><button class="danger-button" id="resetBtn">Reset app</button></div>
+        <div class="quick-row export-row profile-actions"><button class="ghost-button" id="exportCsvBtn" type="button">Export CSV</button><button class="danger-button" id="resetBtn" type="button">Reset app</button></div>
       </div>
     </div>
   `;

@@ -496,8 +496,6 @@ function bindProfile() {
     toast("Profile saved.", "✓");
     render();
   });
-  const json = document.getElementById("exportJsonBtn");
-  if (json) json.addEventListener("click", () => downloadFile("carbontrack-data.json", JSON.stringify(state, null, 2), "application/json"));
   const csv = document.getElementById("exportCsvBtn");
   if (csv) csv.addEventListener("click", exportCsv);
   const reset = document.getElementById("resetBtn");
@@ -520,6 +518,15 @@ function setupGlobalEvents() {
   els.value.addEventListener("input", updatePreview);
   els.date.addEventListener("change", updatePreview);
   els.form.addEventListener("submit", saveActivityFromModal);
+  document.querySelectorAll("[data-close-modal]").forEach((button) => button.addEventListener("click", closeActivityModal));
+}
+
+function closeActivityModal() {
+  editingId = null;
+  isSavingActivity = false;
+  els.saveActivityBtn.disabled = false;
+  els.saveActivityBtn.textContent = "Save activity";
+  els.modal.close("cancel");
 }
 
 function openActivityModal(activity = {}) {
