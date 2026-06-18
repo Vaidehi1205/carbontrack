@@ -80,6 +80,10 @@ label {
   color: var(--muted);
 }
 
+.feature-description {
+  margin: 0 0 14px;
+}
+
 .brand strong {
   display: block;
   font-size: 18px;

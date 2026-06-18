@@ -1,4 +1,5 @@
 import User from "../models/User.js";
+import { sanitizeText } from "../utils/sanitize.js";
 
 /**
  * Register a new user profile in MongoDB after Firebase account creation.
@@ -18,13 +19,13 @@ export async function registerUser(firebaseUID, profile) {
 
   return User.create({
     firebaseUID,
-    name: profile.name,
-    email: profile.email.toLowerCase(),
-    country: profile.country || "US",
-    goal: profile.goal || profile.motivation || "climate",
+    name: sanitizeText(profile.name, 80),
+    email: sanitizeText(profile.email, 254).toLowerCase(),
+    country: sanitizeText(profile.country || "US", 5),
+    goal: sanitizeText(profile.goal || profile.motivation || "climate", 40),
     annualTarget: profile.annualTarget || 7800,
-    motivation: profile.goal || profile.motivation || "climate",
-    avatar: profile.name?.charAt(0)?.toUpperCase() || "U",
+    motivation: sanitizeText(profile.goal || profile.motivation || "climate", 40),
+    avatar: sanitizeText(profile.name, 80)?.charAt(0)?.toUpperCase() || "U",
     onboarded: true
   });
 }
@@ -49,7 +50,7 @@ export async function updateUserProfile(firebaseUID, updates) {
 
   const sanitized = {};
   for (const key of allowed) {
-    if (updates[key] !== undefined) sanitized[key] = updates[key];
+    if (updates[key] !== undefined) sanitized[key] = typeof updates[key] === "string" ? sanitizeText(updates[key], 500) : updates[key];
   }
 
   if (sanitized.name) {

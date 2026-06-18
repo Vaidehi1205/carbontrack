@@ -1,6 +1,6 @@
 import { factors } from "../data/factors.js";
 import { escapeHtml, formatKg, title } from "../utils/helpers.js";
-import { activityLabel } from "./ui.js";
+import { activityLabel, featureDescription } from "./ui.js";
 
 export function filteredActivities(state) {
   const query = state.ui.activitySearch.trim().toLowerCase();
@@ -25,6 +25,7 @@ export function activitiesView(state) {
   const categories = ["all", ...Object.keys(factors)];
   const items = filteredActivities(state);
   return `
+    ${featureDescription("Track and record daily carbon emissions from activities.")}
     <div class="card control-card">
       <div class="tabs">${categories.map((c) => `<button class="chip ${state.ui.activityFilter === c ? "active" : ""}" data-filter="${c}">${title(c)}</button>`).join("")}</div>
       <div class="activity-controls">
@@ -57,8 +58,8 @@ function activityRow(activity) {
   return `
     <div class="activity-row">
       <div class="row" style="justify-content:space-between">
-        <div><strong>${item.icon} ${escapeHtml(item.label)}</strong><div class="muted">${activity.date} · ${activity.value} ${activity.unit}${activity.notes ? ` · ${escapeHtml(activity.notes)}` : ""}</div></div>
-        <div class="row"><span class="pill">${formatKg(activity.co2)}</span><button class="ghost-button" data-edit="${activity.id}">Edit</button><button class="danger-button" data-delete="${activity.id}">Delete</button></div>
+        <div><strong>${escapeHtml(item.icon)} ${escapeHtml(item.label)}</strong><div class="muted">${escapeHtml(activity.date)} · ${escapeHtml(activity.value)} ${escapeHtml(activity.unit)}${activity.notes ? ` · ${escapeHtml(activity.notes)}` : ""}</div></div>
+        <div class="row"><span class="pill">${formatKg(activity.co2)}</span><button class="ghost-button" data-edit="${escapeHtml(activity.id)}">Edit</button><button class="danger-button" data-delete="${escapeHtml(activity.id)}">Delete</button></div>
       </div>
     </div>
   `;

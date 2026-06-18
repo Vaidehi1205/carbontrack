@@ -1,9 +1,10 @@
 import { challenges } from "../data/challenges.js";
 import { formatKg, title } from "../utils/helpers.js";
-import { progressBar } from "./ui.js";
+import { featureDescription, progressBar } from "./ui.js";
 
 export function challengesView(state) {
   return `
+    ${featureDescription("Join focused sustainability challenges and track shared progress.")}
     <div class="grid two-col">
       <div class="card">
         <span class="eyebrow">Community</span>

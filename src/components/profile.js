@@ -1,6 +1,6 @@
 import { achievementsFor, calculateStreak, currentStats, levelFor, pointsFor } from "../utils/calculations.js";
 import { escapeHtml, formatKg } from "../utils/helpers.js";
-import { metricCard, progressBar } from "./ui.js";
+import { featureDescription, metricCard, progressBar } from "./ui.js";
 
 export function profileView(state) {
   const points = pointsFor(state);
@@ -8,6 +8,7 @@ export function profileView(state) {
   const streak = calculateStreak(state.activities);
   const badges = achievementsFor(state);
   return `
+    ${featureDescription("Manage your profile, preferences, exports, and achievement progress.")}
     <div class="grid two-col">
       <div class="card">
         <span class="eyebrow">Settings</span>

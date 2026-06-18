@@ -1,9 +1,9 @@
 import { factors } from "../data/factors.js";
 import { categoryBreakdown, currentStats, dailyTotals, rankRecommendations } from "../utils/calculations.js";
-import { formatKg, formatTons, title } from "../utils/helpers.js";
+import { escapeHtml, formatKg, formatTons, title } from "../utils/helpers.js";
 import { renderLineChart } from "../charts/lineChart.js";
 import { renderPieChart } from "../charts/pieChart.js";
-import { metricCard, progressBar, recommendationCard } from "./ui.js";
+import { featureDescription, metricCard, progressBar, recommendationCard } from "./ui.js";
 
 export function dashboardView(state) {
   const stats = currentStats(state);
@@ -13,6 +13,7 @@ export function dashboardView(state) {
   const sustainabilityScore = ai.sustainabilityScore ?? "—";
 
   return `
+    ${featureDescription("View insights and monitor your sustainability progress.")}
     <div class="grid metrics dashboard-metrics">
       ${metricCard("Today", formatKg(stats.today), "CO2e logged")}
       ${metricCard("This week", formatKg(stats.week), `${stats.weekDelta <= 0 ? Math.abs(stats.weekDelta) + "% lower" : stats.weekDelta + "% higher"} than previous week`, stats.weekDelta <= 0 ? "positive" : "warning")}
@@ -54,7 +55,7 @@ export function dashboardView(state) {
       <div class="card">
         <span class="eyebrow">AI Recommendation</span>
         <h2>Personalized tip</h2>
-        <div class="insight-line">${ai.recommendation || topRec?.title || "Log more activities to unlock AI recommendations."}</div>
+        <div class="insight-line">${escapeHtml(ai.recommendation || topRec?.title || "Log more activities to unlock AI recommendations.")}</div>
         ${ai.predictedSavings ? `<p class="muted">Potential savings: ${ai.predictedSavings}</p>` : ""}
       </div>
       <div class="card">

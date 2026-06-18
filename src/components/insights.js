@@ -3,7 +3,7 @@ import { aiInsights, categoryBreakdown, currentStats, dailyTotals } from "../uti
 import { escapeHtml, formatKg, formatTons, title } from "../utils/helpers.js";
 import { renderBarChart } from "../charts/barChart.js";
 import { renderLineChart } from "../charts/lineChart.js";
-import { metricCard } from "./ui.js";
+import { featureDescription, metricCard } from "./ui.js";
 
 export function insightsView(state) {
   const stats = currentStats(state);
@@ -11,6 +11,7 @@ export function insightsView(state) {
   const ai = state.aiInsights || {};
 
   return `
+    ${featureDescription("Analyze trends and identify opportunities to reduce emissions.")}
     <div class="grid two-col">
       <div class="card chart-wrap">
         <div class="card-head"><div><span class="eyebrow">Projection</span><h2>Annual pace vs target</h2></div><span class="pill">${formatTons(benchmark.annualKg)} ${benchmark.label} avg</span></div>
@@ -38,14 +39,14 @@ export function insightsView(state) {
         ${ai.weeklySummary ? `<div class="insight-line"><strong>Weekly:</strong> ${escapeHtml(ai.weeklySummary)}</div>` : ""}
         ${ai.monthlySummary ? `<div class="insight-line"><strong>Monthly:</strong> ${escapeHtml(ai.monthlySummary)}</div>` : ""}
         ${ai.predictedSavings ? `<div class="insight-line"><strong>Predicted savings:</strong> ${escapeHtml(ai.predictedSavings)}</div>` : ""}
-        ${!ai.weeklySummary ? aiInsights(state).map((insight) => `<div class="insight-line">${insight}</div>`).join("") : ""}
+        ${!ai.weeklySummary ? aiInsights(state).map((insight) => `<div class="insight-line">${escapeHtml(insight)}</div>`).join("") : ""}
       </div>
       <div class="card">
         <span class="eyebrow">Top improvement opportunities</span>
         <h2>AI recommendations</h2>
         ${(ai.topOpportunities || []).length
     ? ai.topOpportunities.map((opp) => `<div class="insight-line">${escapeHtml(opp)}</div>`).join("")
-    : aiInsights(state).map((insight) => `<div class="insight-line">${insight}</div>`).join("")}
+    : aiInsights(state).map((insight) => `<div class="insight-line">${escapeHtml(insight)}</div>`).join("")}
         <h3 style="margin-top:16px">Category breakdown</h3>
         ${Object.entries(categoryBreakdown(state.activities)).map(([category, amount]) => `<div class="breakdown-item"><strong>${title(category)}</strong><span class="muted">${formatKg(amount)}</span></div>`).join("")}
       </div>

@@ -1,6 +1,7 @@
 import Activity from "../models/Activity.js";
 import { factors } from "../config/emissionFactors.js";
 import { calculateEmission } from "../utils/calculateEmission.js";
+import { sanitizeText } from "../utils/sanitize.js";
 import { invalidateByPrefix } from "./cacheService.js";
 
 /**
@@ -48,7 +49,7 @@ export async function createUserActivity(userId, input) {
     carbonEmission: calculateEmission(category, type, value),
     date: date.slice(0, 10),
     unit: factorData.unit,
-    notes: notes || ""
+    notes: sanitizeText(notes, 90)
   });
   invalidateByPrefix(`dashboard:${userId}`);
   return activity;
@@ -74,7 +75,7 @@ export async function updateUserActivity(userId, activityId, input) {
       carbonEmission: calculateEmission(category, type, value),
       date: date.slice(0, 10),
       unit: factorData.unit,
-      notes: notes || ""
+      notes: sanitizeText(notes, 90)
     },
     { new: true }
   );
@@ -115,7 +116,7 @@ export async function syncUserActivities(userId, activities) {
       carbonEmission: activity.co2 || calculateEmission(activity.category, activity.type, activity.value),
       date: activity.date,
       unit: activity.unit || factorData.unit,
-      notes: activity.notes || ""
+      notes: sanitizeText(activity.notes, 90)
     };
   });
 

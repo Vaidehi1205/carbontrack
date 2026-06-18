@@ -20,8 +20,12 @@ export const activityValidation = [
     return true;
   }),
   body("date").matches(/^\d{4}-\d{2}-\d{2}$/).withMessage("Valid date required (YYYY-MM-DD)"),
-  body("value").isFloat({ min: 0.1 }).withMessage("Value must be at least 0.1"),
-  body("notes").optional().isLength({ max: 90 })
+  body("date").custom((value) => {
+    if (new Date(value) > new Date()) throw new Error("Date cannot be in the future");
+    return true;
+  }),
+  body("value").isFloat({ min: 0.1, max: 100000 }).withMessage("Value must be between 0.1 and 100000"),
+  body("notes").optional().trim().isLength({ max: 90 })
 ];
 
 /**

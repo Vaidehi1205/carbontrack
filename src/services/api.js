@@ -29,8 +29,6 @@ async function request(path, options = {}) {
     headers.Authorization = `Bearer ${token}`;
   }
 
-  console.log(`[API] ${options.method || "GET"} ${path}`, { hasToken: !!token });
-
   const response = await fetch(`${getApiBase()}${path}`, {
     ...options,
     headers
@@ -38,11 +36,8 @@ async function request(path, options = {}) {
 
   const data = await response.json().catch(() => ({}));
 
-  console.log(`[API] Response ${response.status} ${path}`, { error: data.error, errors: data.errors });
-
   if (!response.ok) {
     const message = data.error || data.errors?.[0]?.msg || `Request failed (${response.status})`;
-    console.error(`[API Error] ${path}:`, message);
     throw new Error(message);
   }
 

@@ -16,7 +16,7 @@ import {
   clearLegacyStorage
 } from "./utils/storage.js";
 import { createId, downloadFile, escapeHtml, formatKg, title, todayKey } from "./utils/helpers.js";
-import { validateActivity } from "./utils/validation.js";
+import { sanitizeActivityInput, sanitizeProfileInput, validateActivity, validateProfile } from "./utils/validation.js";
 import { fetchConfig, activitiesApi, authApi, dashboardApi, chatbotApi, usersApi } from "./services/api.js";
 import { initFirebase, requireAuth, logout } from "./services/auth.js";
 
@@ -47,6 +47,7 @@ let editingId = null;
 let deletedTimer = null;
 let lastDeleted = null;
 let apiReady = false;
+let isSavingActivity = false;
 
 const els = {
   nav: document.getElementById("nav"),
@@ -243,16 +244,26 @@ function renderOnboarding() {
   });
   document.getElementById("onboardingForm").addEventListener("submit", async (event) => {
     event.preventDefault();
-    state.user = {
-      ...state.user,
+    const profileInput = sanitizeProfileInput({
       name: valueOf("nameSetup"),
       location: valueOf("locationSetup"),
       country: valueOf("countrySetup"),
-      household: Number(valueOf("householdSetup")),
+      household: valueOf("householdSetup"),
       motivation: valueOf("motivationSetup"),
       commute: valueOf("commuteSetup"),
-      renewable: Number(valueOf("renewableSetup")),
-      avatar: valueOf("nameSetup").slice(0, 1).toUpperCase()
+      renewable: valueOf("renewableSetup"),
+      target: state.user.target,
+      theme: state.theme
+    });
+    const profileErrors = validateProfile(profileInput);
+    if (profileErrors.length) {
+      toast(profileErrors[0], "!");
+      return;
+    }
+    state.user = {
+      ...state.user,
+      ...profileInput,
+      avatar: profileInput.name.slice(0, 1).toUpperCase()
     };
     state.onboarded = true;
 
@@ -449,18 +460,29 @@ function bindProfile() {
   const form = document.getElementById("profileForm");
   if (form) form.addEventListener("submit", async (event) => {
     event.preventDefault();
-    state.user = {
-      ...state.user,
+    const profileInput = sanitizeProfileInput({
       name: valueOf("profileName"),
       location: valueOf("profileLocation"),
       country: valueOf("profileCountry"),
-      household: Number(valueOf("profileHousehold")),
-      target: Number(valueOf("profileTarget")),
-      renewable: Number(valueOf("profileRenewable")),
+      household: valueOf("profileHousehold"),
+      motivation: state.user.motivation,
+      commute: state.user.commute,
+      target: valueOf("profileTarget"),
+      renewable: valueOf("profileRenewable"),
       consent: document.getElementById("profileConsent").checked,
-      avatar: valueOf("profileName").slice(0, 1).toUpperCase()
+      theme: valueOf("profileTheme")
+    });
+    const profileErrors = validateProfile(profileInput, { requireTarget: true });
+    if (profileErrors.length) {
+      toast(profileErrors[0], "!");
+      return;
+    }
+    state.user = {
+      ...state.user,
+      ...profileInput,
+      avatar: profileInput.name.slice(0, 1).toUpperCase()
     };
-    state.theme = valueOf("profileTheme");
+    state.theme = profileInput.theme;
 
     if (apiReady) {
       try {
@@ -535,18 +557,24 @@ function updatePreview() {
 
 async function saveActivityFromModal(event) {
   event.preventDefault();
-  const input = {
+  if (isSavingActivity) return;
+
+  const input = sanitizeActivityInput({
     category: els.category.value,
     type: els.type.value,
     date: els.date.value,
     value: Number(els.value.value),
     notes: els.notes.value.trim()
-  };
+  });
   const errors = validateActivity(input);
   if (errors.length) {
     document.getElementById("modalErrors").textContent = errors.join(" ");
     return;
   }
+
+  isSavingActivity = true;
+  els.saveActivityBtn.disabled = true;
+  els.saveActivityBtn.textContent = editingId ? "Saving..." : "Logging...";
 
   try {
     if (editingId && apiReady) {
@@ -575,6 +603,10 @@ async function saveActivityFromModal(event) {
   } catch (error) {
     document.getElementById("modalErrors").textContent = error.message;
     return;
+  } finally {
+    isSavingActivity = false;
+    els.saveActivityBtn.disabled = false;
+    els.saveActivityBtn.textContent = editingId ? "Save changes" : "Save activity";
   }
 
   editingId = null;

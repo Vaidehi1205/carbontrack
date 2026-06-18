@@ -1,7 +1,11 @@
 import { escapeHtml, formatKg, title } from "../utils/helpers.js";
 
 export function metricCard(label, value, subtext, tone = "") {
-  return `<div class="card metric"><span>${escapeHtml(label)}</span><strong class="${tone}">${value}</strong><span>${escapeHtml(subtext)}</span></div>`;
+  return `<div class="card metric"><span>${escapeHtml(label)}</span><strong class="${escapeHtml(tone)}">${escapeHtml(value)}</strong><span>${escapeHtml(subtext)}</span></div>`;
+}
+
+export function featureDescription(text) {
+  return `<p class="muted feature-description">${escapeHtml(text)}</p>`;
 }
 
 export function progressBar(value, color = "var(--sage)", label = "") {
@@ -27,7 +31,7 @@ export function recommendationCard(rec, compact = false) {
         <span class="pill">$${rec.savings.toLocaleString()}/yr</span>
         <span class="pill">${Math.round(rec.score * 100)}% match</span>
       </div>
-      ${compact ? `<button class="primary-button" data-start="${rec.id}">Start</button>` : `<div class="row"><button class="primary-button" data-start="${rec.id}">Start</button><button class="ghost-button" data-dismiss="${rec.id}">Dismiss</button></div>`}
+      ${compact ? `<button class="primary-button" data-start="${escapeHtml(rec.id)}">Start</button>` : `<div class="row"><button class="primary-button" data-start="${escapeHtml(rec.id)}">Start</button><button class="ghost-button" data-dismiss="${escapeHtml(rec.id)}">Dismiss</button></div>`}
     </div>
   `;
 }

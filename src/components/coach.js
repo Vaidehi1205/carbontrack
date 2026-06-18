@@ -1,4 +1,5 @@
 import { escapeHtml } from "../utils/helpers.js";
+import { featureDescription } from "./ui.js";
 
 /**
  * Carbon Coach chatbot view — AI-powered sustainability advisor.
@@ -9,6 +10,7 @@ export function coachView(state) {
   const searching = state.chat?.search || "";
 
   return `
+    ${featureDescription("Ask Carbon Coach for personalized guidance based on your logged activities.")}
     <div class="grid two-col coach-layout">
       <div class="card coach-panel">
         <div class="card-head">
@@ -79,12 +81,12 @@ function renderHistoryList(history) {
   }
 
   return history.map((item) => `
-    <div class="history-item" data-chat-id="${item.id}">
+    <div class="history-item" data-chat-id="${escapeHtml(item.id)}">
       <strong>${escapeHtml(item.question.slice(0, 60))}${item.question.length > 60 ? "…" : ""}</strong>
       <span class="muted">${new Date(item.timestamp).toLocaleDateString()}</span>
       <div class="history-actions">
-        <button class="ghost-button" data-load-chat="${item.id}">View</button>
-        <button class="danger-button" data-delete-chat="${item.id}">Delete</button>
+        <button class="ghost-button" data-load-chat="${escapeHtml(item.id)}">View</button>
+        <button class="danger-button" data-delete-chat="${escapeHtml(item.id)}">Delete</button>
       </div>
     </div>
   `).join("");

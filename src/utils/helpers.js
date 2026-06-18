@@ -27,6 +27,14 @@ export function escapeHtml(value = "") {
     .replaceAll("'", "&#039;");
 }
 
+export function sanitizePlainText(value = "", maxLength = 500) {
+  return String(value)
+    .replace(/[\u0000-\u001F\u007F]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, maxLength);
+}
+
 export function downloadFile(filename, content, type) {
   const blob = new Blob([content], { type });
   const url = URL.createObjectURL(blob);
