@@ -506,10 +506,6 @@ function bindProfile() {
   });
   const csv = document.getElementById("exportCsvBtn");
   if (csv) csv.addEventListener("click", exportCsv);
-  const reset = document.getElementById("resetBtn");
-  if (reset) reset.addEventListener("click", () => {
-    toast("Reset is disabled in cloud mode. Delete activities individually.", "!");
-  });
 }
 
 function setupGlobalEvents() {

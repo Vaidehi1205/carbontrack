@@ -56,7 +56,7 @@ export function profileView(state) {
         <div class="achievement-grid">${badges.map((badge) => `<div class="achievement ${badge.unlocked ? "unlocked" : ""}"><strong>${badge.name}</strong><span>${badge.detail}</span></div>`).join("")}</div>
         <h3>Target progress</h3>
         ${progressBar(stats.targetProgress, stats.annualPace <= state.user.target ? "var(--sage)" : "var(--amber)", "Target progress")}
-        <div class="quick-row export-row profile-actions"><button class="ghost-button" id="exportCsvBtn" type="button">Export CSV</button><button class="danger-button" id="resetBtn" type="button">Reset app</button></div>
+        <div class="quick-row export-row profile-actions"><button class="ghost-button" id="exportCsvBtn" type="button">Export CSV</button></div>
       </div>
     </div>
   `;
